@@ -38,7 +38,7 @@ class MistralAdvisor:
     ):
         self._model = model
         if client is None:
-            from mistralai import Mistral
+            from mistralai.client.sdk import Mistral
 
             client = Mistral(api_key=api_key)
         self._client = client
