@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from memory.json_store import JsonMemory
+from memory.tinydb_store import TinyDbMemory
 from skills import default_skills
 from spirit.spirit import InvalidCronError, Schedule, Spirit, SpiritConfig
 from view import env_io
@@ -31,7 +31,7 @@ _ENV_KEYS = (
     "BRAIN_BASE_URL",
     "TELEGRAM_TOKEN",
     "TELEGRAM_CHAT_ID",
-    "MEMORY_ROOT",
+    "MEMORY_PATH",
     "SPIRIT_PATH",
 )
 
@@ -77,9 +77,9 @@ def build_app(env_path: str = ".env") -> FastAPI:
         path = _values().get("SPIRIT_PATH") or os.getenv("SPIRIT_PATH", "data/spirit.json")
         return Spirit(path)
 
-    def _memory() -> JsonMemory:
-        root = _values().get("MEMORY_ROOT") or os.getenv("MEMORY_ROOT", "data/memory")
-        return JsonMemory(root)
+    def _memory() -> TinyDbMemory:
+        path = _values().get("MEMORY_PATH") or os.getenv("MEMORY_PATH", "data/memory.json")
+        return TinyDbMemory(path)
 
     # ---- Env ----
 

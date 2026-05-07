@@ -9,7 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import config
 from body import Body
 from brain.brain import BrainConfig, build_brain
-from memory.json_store import JsonMemory
+from memory.tinydb_store import TinyDbMemory
 from skills import default_skills
 from spirit.spirit import Spirit
 from voice.telegram import TelegramVoice
@@ -40,7 +40,7 @@ async def run() -> None:
         api_key=settings.brain_api_key,
         base_url=settings.brain_base_url,
     ))
-    memory = JsonMemory(settings.memory_root)
+    memory = TinyDbMemory(settings.memory_path)
     spirit = Spirit(settings.spirit_path)
     voice = TelegramVoice(settings.telegram_token, settings.telegram_chat_id)
 

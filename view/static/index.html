@@ -236,9 +236,9 @@
 
 <section id="tab-memory">
   <h3>Memory configuration</h3>
-  <div class="row"><label>Memory root</label>
+  <div class="row"><label>Memory path</label>
     <div class="field inline-save">
-      <input id="memory-root" placeholder="data/memory" />
+      <input id="memory-path" placeholder="data/memory.json" />
       <button class="primary" onclick="saveMemoryConfig()">Save</button>
     </div>
   </div>
@@ -675,11 +675,11 @@ let currentTopic = null;
 
 async function loadMemoryConfig() {
   const data = await api("GET", "/api/env");
-  $("memory-root").value = data.values.MEMORY_ROOT || "";
+  $("memory-path").value = data.values.MEMORY_PATH || "";
 }
 
 async function saveMemoryConfig() {
-  await api("PUT", "/api/env", { values: { MEMORY_ROOT: $("memory-root").value } });
+  await api("PUT", "/api/env", { values: { MEMORY_PATH: $("memory-path").value } });
   await restartBot();
 }
 

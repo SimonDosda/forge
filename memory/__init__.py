@@ -1,4 +1,4 @@
 from memory.memory import Entry, Memory
-from memory.json_store import JsonMemory
+from memory.tinydb_store import TinyDbMemory
 
-__all__ = ["Entry", "Memory", "JsonMemory"]
+__all__ = ["Entry", "Memory", "TinyDbMemory"]

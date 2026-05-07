@@ -10,14 +10,14 @@ Modular personal assistant skeleton. Five small components, swappable backends. 
    ┌──────┬──────────┼──────────┬──────┐
    ▼      ▼          ▼          ▼      ▼
  Brain  Memory     Skills    Spirit
-(LLM)  (JSON)   (MCP-shaped) (prompt
+(LLM) (TinyDB)  (MCP-shaped) (prompt
                               + cron)
 ```
 
 ## Components
 
 - **Brain** — AI connector. Configurable provider (Mistral, Anthropic, OpenAI, Ollama) and model. Interface: `chat(messages, tools) → response`.
-- **Memory** — Pluggable storage; default `JsonMemory` keeps one JSON file per *topic* under `data/memory/`. Operations: `get / add / update / delete`.
+- **Memory** — Pluggable storage; default `TinyDbMemory` keeps all topics in a single TinyDB file at `data/memory.json` (one table per topic). Operations: `get / add / update / delete`.
 - **Skills** — MCP-shaped capabilities. Each skill exposes `tools: list[ToolSpec]` and a `call(name, arguments)` handler. Memory itself is wrapped as a skill so the Brain can read/write it.
 - **Spirit** — Static instructions (system prompt) and scheduled actions, persisted to `data/spirit.json`. Editable at runtime.
 - **Voice** — I/O channel. `TelegramVoice` for now; the protocol covers any push/pull transport (email, WhatsApp, ...).
@@ -31,7 +31,7 @@ config.py           # .env → Settings
 body.py             # the loop: history → brain → tools → reply
 awake.py            # entry point — wakes the body up
 brain/              # protocol + mistral / anthropic / openai / ollama
-memory/             # protocol + json_store
+memory/             # protocol + tinydb_store
 skills/             # protocol + memory_skill + open_meteo
 spirit/             # protocol + JSON-backed config
 voice/              # protocol + telegram
@@ -44,8 +44,8 @@ data/               # runtime state (gitignored)
 ```bash
 uv sync
 cp .env.example .env   # then edit
-uv run python awake.py          # run the bot
-uv run python -m view.server    # config UI on http://127.0.0.1:8765
+uv run golem awake     # run the bot
+uv run golem view      # config UI on http://127.0.0.1:8765
 ```
 
 ## Adding a new skill

@@ -17,8 +17,8 @@ class Settings:
     telegram_token: str
     telegram_chat_id: int
 
-    # Filesystem roots
-    memory_root: str
+    # Filesystem paths
+    memory_path: str
     spirit_path: str
 
 
@@ -46,6 +46,6 @@ def load(env_path: str | None = ".env") -> Settings:
         brain_base_url=os.getenv("BRAIN_BASE_URL", ""),
         telegram_token=os.environ["TELEGRAM_TOKEN"],
         telegram_chat_id=int(os.environ["TELEGRAM_CHAT_ID"]),
-        memory_root=os.getenv("MEMORY_ROOT", "data/memory"),
+        memory_path=os.getenv("MEMORY_PATH", "data/memory.json"),
         spirit_path=os.getenv("SPIRIT_PATH", "data/spirit.json"),
     )
