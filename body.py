@@ -1,4 +1,4 @@
-"""Wires Brain + Memory + Skills + Spirit + Voice into a running agent."""
+"""Body: wires Brain + Memory + Skills + Spirit + Voice into a thinking loop."""
 import asyncio
 import json
 from typing import Any
@@ -17,7 +17,7 @@ _MAX_TOOL_ITERATIONS = 8
 _CONVO_TOPIC = "conversation"
 
 
-class Orchestrator:
+class Body:
     def __init__(
         self,
         brain: Brain,

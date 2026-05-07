@@ -27,8 +27,8 @@ Modular personal assistant. Five small components, swappable backends.
 ```
 core.py             # shared dataclasses (Message, ToolCall, ToolSpec, ...)
 config.py           # .env → Settings
-orchestrator.py     # the loop: history → brain → tools → reply
-main.py             # entry point
+body.py             # the loop: history → brain → tools → reply
+awake.py            # entry point — wakes the body up
 brain/              # protocol + mistral / anthropic / openai / ollama
 memory/             # protocol + json_store
 skills/             # protocol + memory_skill + open_meteo
@@ -42,7 +42,7 @@ data/               # runtime state (gitignored)
 ```bash
 uv sync
 cp .env.example .env   # then edit
-uv run python main.py
+uv run python awake.py
 ```
 
 ## Adding a new skill
@@ -58,7 +58,7 @@ class MySkill:
             return ...
 ```
 
-Register it in `main.py` alongside `MemorySkill` and `OpenMeteo`.
+Register it in `awake.py` alongside `MemorySkill` and `OpenMeteo`.
 
 ## Adding a new brain provider
 
@@ -66,4 +66,4 @@ Create `brain/<provider>.py` exposing a class with `chat(messages, tools) → Br
 
 ## Adding a new voice
 
-Implement `voice.voice.Voice` (`send`, `run`, `stop`). Swap the constructor in `main.py`.
+Implement `voice.voice.Voice` (`send`, `run`, `stop`). Swap the constructor in `awake.py`.

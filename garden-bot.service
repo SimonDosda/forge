@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=simple
 User=__USER__
 WorkingDirectory=__PATH__
-ExecStart=__PATH__/.venv/bin/python __PATH__/main.py
+ExecStart=__PATH__/.venv/bin/python __PATH__/awake.py
 Restart=on-failure
 RestartSec=5
 
