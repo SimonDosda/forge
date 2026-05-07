@@ -1,10 +1,10 @@
-# Garden Bot
+# Golem
 
-Modular personal assistant. Five small components, swappable backends.
+Modular personal assistant skeleton. Five small components, swappable backends. Personality is configuration — point it at any domain via `data/spirit.json`.
 
 ```
 ┌─────────┐     ┌──────────┐
-│  Voice  │ ←→ │ Orchestr.│
+│  Voice  │ ←→ │   Body   │
 └─────────┘     └────┬─────┘
                      │
    ┌──────┬──────────┼──────────┬──────┐

@@ -34,6 +34,7 @@ class Body:
         self._spirit = spirit
         self._voice = voice
         self._history_window = history_window
+        self._last_reconciled_mtime: float = -1.0
 
     # public entry points
 
@@ -51,6 +52,39 @@ class Body:
         if reply:
             await self._voice.send(reply)
 
+    def reconcile_schedules(self, scheduler: Any, reserved_prefix: str = "_") -> bool:
+        """Sync APScheduler jobs to current `spirit.schedules`.
+
+        No-op if Spirit hasn't changed since the last reconcile. Jobs whose id
+        starts with `reserved_prefix` are left alone (used for housekeeping
+        jobs like the reconciler itself).
+        Returns True if any change was applied.
+        """
+        mtime = self._spirit.mtime
+        if mtime == self._last_reconciled_mtime:
+            return False
+        self._last_reconciled_mtime = mtime
+
+        desired: dict[str, Schedule] = {s.id: s for s in self._spirit.schedules}
+        existing_ids = {
+            j.id for j in scheduler.get_jobs() if not j.id.startswith(reserved_prefix)
+        }
+
+        for jid in existing_ids - desired.keys():
+            scheduler.remove_job(jid)
+
+        for jid, sched in desired.items():
+            if jid in existing_ids:
+                scheduler.remove_job(jid)
+            scheduler.add_job(
+                self.fire_schedule,
+                "cron",
+                kwargs={"schedule": sched},
+                id=jid,
+                **sched.cron,
+            )
+        return True
+
     # core loop
 
     async def _think(self, user_text: str, schedule_id: str | None = None) -> str:
@@ -64,9 +98,10 @@ class Body:
         )
         messages: list[Message] = [Message(role="system", content=system)]
         messages.extend(self._recent_history())
-        if schedule_id is None:
-            messages.append(Message(role="user", content=user_text))
-        else:
+        # User messages are persisted by handle_user_message before _think runs,
+        # so they're already in _recent_history. Schedule prompts are not
+        # persisted, so we inject them here with a marker.
+        if schedule_id is not None:
             messages.append(Message(
                 role="user",
                 content=f"[scheduled:{schedule_id}] {user_text}",
@@ -83,7 +118,7 @@ class Body:
                 tool_calls=response.tool_calls,
             ))
             for call in response.tool_calls:
-                result = _invoke(dispatch, call)
+                result = await asyncio.to_thread(_invoke, dispatch, call)
                 messages.append(Message(
                     role="tool",
                     tool_call_id=call.id,

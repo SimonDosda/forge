@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 from memory.json_store import JsonMemory
 from skills import default_skills
-from spirit.spirit import Schedule, Spirit, SpiritConfig
+from spirit.spirit import InvalidCronError, Schedule, Spirit, SpiritConfig
 from view import env_io
 
 
@@ -68,7 +68,7 @@ class VoiceSend(BaseModel):
 def build_app(env_path: str = ".env") -> FastAPI:
     load_dotenv(env_path, override=False)
 
-    app = FastAPI(title="Garden Bot — Config")
+    app = FastAPI(title="Golem — Config")
 
     def _values() -> dict[str, str]:
         return env_io.read(env_path)
@@ -113,13 +113,16 @@ def build_app(env_path: str = ".env") -> FastAPI:
     @app.put("/api/spirit")
     def put_spirit(update: SpiritUpdate) -> dict[str, str]:
         s = _spirit()
-        s.update(SpiritConfig(
-            system_prompt=update.system_prompt,
-            schedules=tuple(
-                Schedule(id=sc.id, cron=sc.cron, prompt=sc.prompt)
-                for sc in update.schedules
-            ),
-        ))
+        try:
+            s.update(SpiritConfig(
+                system_prompt=update.system_prompt,
+                schedules=tuple(
+                    Schedule(id=sc.id, cron=sc.cron, prompt=sc.prompt)
+                    for sc in update.schedules
+                ),
+            ))
+        except InvalidCronError as exc:
+            raise HTTPException(400, str(exc))
         return {"status": "ok"}
 
     # ---- Skills (read-only) ----

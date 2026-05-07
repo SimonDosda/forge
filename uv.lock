@@ -231,7 +231,7 @@ wheels = [
 ]
 
 [[package]]
-name = "garden-bot"
+name = "golem"
 version = "0.2.0"
 source = { virtual = "." }
 dependencies = [

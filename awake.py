@@ -47,14 +47,15 @@ async def run() -> None:
     body = Body(brain=brain, memory=memory, skills=default_skills(memory), spirit=spirit, voice=voice)
 
     scheduler = AsyncIOScheduler()
-    for sched in spirit.schedules:
-        scheduler.add_job(
-            body.fire_schedule,
-            "cron",
-            kwargs={"schedule": sched},
-            id=sched.id,
-            **sched.cron,
-        )
+    body.reconcile_schedules(scheduler)
+    # Pick up Spirit edits made via the View without a restart.
+    scheduler.add_job(
+        body.reconcile_schedules,
+        "interval",
+        kwargs={"scheduler": scheduler},
+        seconds=30,
+        id="_reconcile_schedules",
+    )
     scheduler.start()
 
     stop_event = asyncio.Event()

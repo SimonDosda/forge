@@ -20,7 +20,7 @@ class MemorySkill:
                 description=(
                     "Read entries from a memory topic. Returns all entries for the topic, "
                     "or a single entry if entry_id is provided. Topics are user-defined "
-                    "categories (e.g. 'plants', 'garden_log', 'preferences')."
+                    "categories (e.g. 'tasks', 'journal', 'preferences')."
                 ),
                 input_schema={
                     "type": "object",

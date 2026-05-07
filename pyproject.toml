@@ -1,7 +1,7 @@
 [project]
-name = "garden-bot"
+name = "golem"
 version = "0.2.0"
-description = "Modular personal assistant: Brain (LLM) + Memory (JSON) + Skills (MCP-shaped) + Spirit (instructions/schedules) + Voice (Telegram)."
+description = "Modular personal assistant skeleton: Brain (LLM) + Memory (JSON) + Skills (MCP-shaped) + Spirit (instructions/schedules) + Voice (Telegram). Personality is configuration."
 requires-python = ">=3.11"
 dependencies = [
     "python-telegram-bot>=21.0",
