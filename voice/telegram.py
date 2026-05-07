@@ -1,3 +1,4 @@
+import sys
 from typing import Any
 
 from voice.voice import IncomingHandler
@@ -6,7 +7,7 @@ from voice.voice import IncomingHandler
 class TelegramVoice:
     def __init__(self, token: str, chat_id: int, app: Any | None = None):
         self._token = token
-        self._chat_id = chat_id
+        self._chat_id = int(chat_id)
         if app is None:
             from telegram.ext import Application
             app = Application.builder().token(token).build()
@@ -19,10 +20,21 @@ class TelegramVoice:
         from telegram.ext import MessageHandler, filters
 
         async def handler(update, _ctx):
-            if update.message and update.message.text:
-                reply = await on_message(update.message.text)
-                if reply:
-                    await update.message.reply_text(reply)
+            if not (update.message and update.message.text):
+                return
+            sender_chat_id = update.effective_chat.id if update.effective_chat else None
+            if sender_chat_id != self._chat_id:
+                user = update.effective_user
+                user_label = f"{user.id} ({user.username or user.full_name})" if user else "unknown"
+                print(
+                    f"[telegram] ignored message from unauthorized chat_id={sender_chat_id} user={user_label}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                return
+            reply = await on_message(update.message.text)
+            if reply:
+                await update.message.reply_text(reply)
 
         self._app.add_handler(MessageHandler(filters.TEXT, handler))
 

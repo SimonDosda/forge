@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from memory.json_store import JsonMemory
+from skills import default_skills
 from spirit.spirit import Schedule, Spirit, SpiritConfig
 from view import env_io
 
@@ -22,7 +23,7 @@ _HERE = Path(__file__).resolve().parent
 _STATIC = _HERE / "static"
 
 
-# Editable .env keys — surfaced in the UI. Order matters (drives display).
+# Editable .env keys — whitelist for writes.
 _ENV_KEYS = (
     "BRAIN_PROVIDER",
     "BRAIN_MODEL",
@@ -58,27 +59,33 @@ class EntryUpdate(BaseModel):
     data: dict[str, Any]
 
 
+class VoiceSend(BaseModel):
+    text: str
+
+
 # ---------- App ----------
 
 def build_app(env_path: str = ".env") -> FastAPI:
     load_dotenv(env_path, override=False)
 
-    memory_root = os.getenv("MEMORY_ROOT", "data/memory")
-    spirit_path = os.getenv("SPIRIT_PATH", "data/spirit.json")
-
     app = FastAPI(title="Garden Bot — Config")
 
+    def _values() -> dict[str, str]:
+        return env_io.read(env_path)
+
     def _spirit() -> Spirit:
-        return Spirit(spirit_path)
+        path = _values().get("SPIRIT_PATH") or os.getenv("SPIRIT_PATH", "data/spirit.json")
+        return Spirit(path)
 
     def _memory() -> JsonMemory:
-        return JsonMemory(memory_root)
+        root = _values().get("MEMORY_ROOT") or os.getenv("MEMORY_ROOT", "data/memory")
+        return JsonMemory(root)
 
     # ---- Env ----
 
     @app.get("/api/env")
     def get_env() -> dict[str, Any]:
-        values = env_io.read(env_path)
+        values = _values()
         return {
             "keys": list(_ENV_KEYS),
             "values": {k: values.get(k, "") for k in _ENV_KEYS},
@@ -113,6 +120,62 @@ def build_app(env_path: str = ".env") -> FastAPI:
                 for sc in update.schedules
             ),
         ))
+        return {"status": "ok"}
+
+    # ---- Skills (read-only) ----
+
+    @app.get("/api/skills")
+    def list_skills() -> list[dict]:
+        return [
+            {
+                "name": s.name,
+                "tools": [
+                    {"name": t.name, "description": t.description, "input_schema": t.input_schema}
+                    for t in s.tools
+                ],
+            }
+            for s in default_skills(_memory())
+        ]
+
+    # ---- Bot lifecycle ----
+
+    @app.post("/api/restart")
+    def restart_bot() -> dict[str, Any]:
+        """Signal the running bot to exit. If supervised (systemd Restart=always),
+        the bot comes back up with the new config. Otherwise the user must restart it manually."""
+        import signal as _signal
+
+        pid_file = Path("data/bot.pid")
+        if not pid_file.exists():
+            return {"status": "not_running", "detail": "No bot.pid found — bot is not running."}
+        try:
+            pid = int(pid_file.read_text().strip())
+        except (ValueError, OSError) as exc:
+            raise HTTPException(500, f"unreadable PID file: {exc}")
+        try:
+            os.kill(pid, _signal.SIGTERM)
+        except ProcessLookupError:
+            return {"status": "stale", "detail": f"PID {pid} not running (stale pid file)."}
+        except PermissionError as exc:
+            raise HTTPException(500, f"cannot signal PID {pid}: {exc}")
+        return {"status": "signaled", "pid": pid}
+
+    # ---- Voice (Telegram) ----
+
+    @app.post("/api/voice/send")
+    async def voice_send(body: VoiceSend) -> dict[str, str]:
+        from telegram import Bot
+
+        v = _values()
+        token = v.get("TELEGRAM_TOKEN", "")
+        chat_id_raw = v.get("TELEGRAM_CHAT_ID", "")
+        if not token or not chat_id_raw:
+            raise HTTPException(400, "TELEGRAM_TOKEN and TELEGRAM_CHAT_ID must be set")
+        try:
+            chat_id = int(chat_id_raw)
+        except ValueError:
+            raise HTTPException(400, f"TELEGRAM_CHAT_ID is not an integer: {chat_id_raw!r}")
+        await Bot(token=token).send_message(chat_id=chat_id, text=body.text)
         return {"status": "ok"}
 
     # ---- Memory ----
@@ -171,7 +234,14 @@ def main() -> None:
 
     host = os.getenv("VIEW_HOST", "127.0.0.1")
     port = int(os.getenv("VIEW_PORT", "8765"))
-    uvicorn.run(build_app(), host=host, port=port)
+    uvicorn.run(
+        "view.server:build_app",
+        factory=True,
+        host=host,
+        port=port,
+        reload=True,
+        reload_dirs=[str(Path(__file__).resolve().parent.parent)],
+    )
 
 
 if __name__ == "__main__":

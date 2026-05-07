@@ -21,6 +21,7 @@
     max-width: 920px; margin-inline: auto;
   }
   h1 { margin: 0 0 24px; font-size: 22px; }
+  h3 { margin: 0 0 12px; font-size: 15px; }
   nav { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
   nav button {
     background: none; border: none; padding: 10px 16px;
@@ -45,11 +46,33 @@
   }
   button.danger { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
   button.ghost { background: white; border: 1px solid var(--border); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
-  .schedule, .entry {
+  .schedule, .entry, .skill-card {
     border: 1px solid var(--border); border-radius: 6px;
     padding: 14px; margin-bottom: 12px; background: white;
   }
-  .schedule h3, .entry h3 { margin: 0 0 10px; font-size: 14px; }
+  .schedule-title {
+    font-size: 16px; font-weight: 600; color: var(--accent);
+    border: 1px solid transparent; background: transparent;
+    padding: 4px 6px; margin: -4px -6px 12px; border-radius: 4px;
+    width: calc(100% + 12px);
+  }
+  .schedule-title:hover { border-color: var(--border); background: #fafafa; }
+  .schedule-title:focus { border-color: var(--accent); background: white; outline: none; }
+  .block-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 14px 0 4px; }
+  .cron-builder { display: flex; flex-direction: column; gap: 8px; }
+  .cron-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .cron-row label { font-size: 13px; color: var(--muted); }
+  .cron-row input[type=time], .cron-row input[type=number] { width: auto; max-width: 120px; }
+  .cron-row select { width: auto; max-width: 220px; }
+  .day-toggles { display: flex; gap: 4px; flex-wrap: wrap; }
+  .day-toggles input[type=checkbox] { display: none; }
+  .day-toggles label {
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: 4px 12px; font-size: 13px; cursor: pointer;
+    background: white; color: var(--muted);
+  }
+  .day-toggles input:checked + label { background: var(--accent); color: white; border-color: var(--accent); }
+  .cron-summary { font-size: 12px; color: var(--muted); font-style: italic; }
   .entry-header { display: flex; gap: 8px; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap; }
   .entry-header .when { font-size: 13px; font-weight: 600; color: var(--accent); }
   .entry-header .when-rel { font-size: 12px; color: var(--muted); }
@@ -58,7 +81,7 @@
   .hint code { background: var(--code); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
   .hint ul { margin: 6px 0 6px 18px; padding: 0; }
   .hint li { margin-bottom: 2px; }
-  .toolbar { display: flex; gap: 8px; margin-top: 16px; }
+  .toolbar { display: flex; gap: 8px; margin-top: 16px; align-items: center; }
   .topic-list { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
   .topic-list button { background: white; border: 1px solid var(--border); padding: 4px 10px; border-radius: 14px; cursor: pointer; font-size: 13px; }
   .topic-list button.active { background: var(--accent); color: white; border-color: var(--accent); }
@@ -80,50 +103,149 @@
   .msg-role { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; letter-spacing: 0.04em; }
   .msg-content { white-space: pre-wrap; line-height: 1.45; }
   .msg-extras { font-size: 11px; color: var(--muted); margin-top: 6px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .skill-name { margin: 0 0 12px; font-size: 15px; color: var(--accent); }
+  .tool { padding: 10px 0; border-top: 1px solid #f0f0f0; }
+  .tool:first-child { border-top: none; padding-top: 0; }
+  .tool-name { font-family: ui-monospace, monospace; font-size: 13px; font-weight: 600; }
+  .tool-desc { font-size: 13px; color: var(--fg); margin: 4px 0; line-height: 1.4; }
+  .tool-schema summary { font-size: 11px; color: var(--muted); cursor: pointer; user-select: none; }
+  .tool-schema[open] summary { margin-bottom: 6px; }
+  .section-divider { margin-top: 32px; }
+  .subnav { display: flex; gap: 4px; margin-bottom: 20px; }
+  .subnav button {
+    background: white; border: 1px solid var(--border);
+    padding: 6px 14px; font-size: 13px; cursor: pointer;
+    border-radius: 14px; color: var(--muted);
+  }
+  .subnav button.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .subsection { display: none; }
+  .subsection.active { display: block; }
+  .prompt-wrap .prompt-display {
+    white-space: pre-wrap;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: white;
+    cursor: text;
+    font-size: 14px;
+    line-height: 1.55;
+    min-height: 40px;
+  }
+  .prompt-wrap .prompt-display:hover { border-color: var(--accent); }
+  .prompt-wrap .prompt-display:empty::before { content: "(click to edit)"; color: var(--muted); font-style: italic; }
+  .prompt-wrap textarea { display: none; }
+  .field.inline-save { display: flex; gap: 8px; align-items: stretch; }
+  .field.inline-save input { flex: 1; }
+  .field.inline-save button { flex: 0 0 auto; }
+  .prompt-wrap.editing .prompt-display { display: none; }
+  .prompt-wrap.editing textarea { display: block; }
   .toast { position: fixed; bottom: 20px; right: 20px; background: var(--accent); color: white; padding: 10px 16px; border-radius: 4px; opacity: 0; transition: opacity .2s; }
   .toast.show { opacity: 1; }
   .toast.error { background: var(--danger); }
-  pre.json { background: var(--code); padding: 8px; border-radius: 4px; font-size: 12px; overflow-x: auto; }
 </style>
 </head>
 <body>
 <h1>Garden Bot — Config</h1>
 
 <nav>
-  <button data-tab="env" class="active">Environment</button>
-  <button data-tab="spirit">Spirit</button>
+  <button data-tab="spirit" class="active">Spirit</button>
   <button data-tab="memory">Memory</button>
+  <button data-tab="brain">Brain</button>
+  <button data-tab="skills">Skills</button>
+  <button data-tab="voice">Voice</button>
 </nav>
 
-<section id="tab-env" class="active">
-  <div id="env-fields"></div>
+<section id="tab-brain">
+  <h3>Brain configuration</h3>
+  <div class="row"><label>Provider</label>
+    <div class="field"><select id="brain-provider" onchange="onProviderChange()"></select></div>
+  </div>
+  <div class="row"><label>Model</label>
+    <div class="field" id="brain-model-wrap"></div>
+  </div>
+  <div class="row" id="brain-key-row"><label>API key</label>
+    <div class="field"><input type="password" id="brain-api-key" placeholder="(secret)" /></div>
+  </div>
+  <div class="row" id="brain-base-url-row"><label>Base URL</label>
+    <div class="field"><input id="brain-base-url" placeholder="http://localhost:11434" /></div>
+  </div>
   <div class="toolbar">
-    <button class="primary" onclick="saveEnv()">Save</button>
+    <button class="primary" onclick="saveBrain()">Save</button>
     <span class="meta">Restart the bot to pick up changes.</span>
   </div>
 </section>
 
-<section id="tab-spirit">
-  <div class="row">
-    <label>System prompt</label>
-    <div class="field"><textarea id="spirit-prompt" rows="8"></textarea></div>
+<section id="tab-spirit" class="active">
+  <div class="subnav">
+    <button data-sub="prompt" class="active" onclick="setSpiritSub('prompt')">System prompt</button>
+    <button data-sub="schedules" onclick="setSpiritSub('schedules')">Schedules</button>
   </div>
-  <h3>Schedules</h3>
-  <div id="schedules"></div>
+
+  <div id="spirit-sub-prompt" class="subsection active">
+    <div class="prompt-wrap">
+      <div id="spirit-prompt-display" class="prompt-display" onclick="startPromptEdit(this.parentNode)"></div>
+      <textarea id="spirit-prompt" rows="22" onblur="endPromptEdit(this.parentNode)"></textarea>
+    </div>
+    <div class="toolbar">
+      <button class="primary" onclick="saveSpirit()">Save</button>
+    </div>
+  </div>
+
+  <div id="spirit-sub-schedules" class="subsection">
+    <div id="schedules"></div>
+    <div class="toolbar">
+      <button class="ghost" onclick="addSchedule()">+ Schedule</button>
+      <button class="primary" onclick="saveSpirit()">Save</button>
+    </div>
+  </div>
+</section>
+
+<section id="tab-skills">
+  <h3>Available skills <span class="meta">(read-only — defined in code)</span></h3>
+  <div id="skills-list"></div>
+</section>
+
+<section id="tab-voice">
+  <h3>Telegram</h3>
+  <div class="row"><label>Bot token</label>
+    <div class="field"><input type="password" id="tg-token" placeholder="(from @BotFather)" /></div>
+  </div>
+  <div class="row"><label>Chat ID</label>
+    <div class="field">
+      <input id="tg-chat-id" />
+      <div class="hint">The only chat allowed to talk to the bot. Messages from any other chat are silently ignored.</div>
+    </div>
+  </div>
   <div class="toolbar">
-    <button class="ghost" onclick="addSchedule()">+ Schedule</button>
-    <button class="primary" onclick="saveSpirit()">Save</button>
+    <button class="primary" onclick="saveVoice()">Save</button>
+    <span class="meta">Restart the bot to pick up changes.</span>
+  </div>
+
+  <h3 class="section-divider">Send a message</h3>
+  <textarea id="voice-send-text" rows="3" placeholder="Type a message to send to the chat"></textarea>
+  <div class="toolbar">
+    <button class="primary" onclick="voiceSend()">Send</button>
+  </div>
+
+  <h3 class="section-divider">Recent messages</h3>
+  <div id="voice-messages"></div>
+  <div class="toolbar">
+    <button class="ghost" onclick="loadVoiceMessages()">Refresh</button>
   </div>
 </section>
 
 <section id="tab-memory">
+  <h3>Memory configuration</h3>
+  <div class="row"><label>Memory root</label>
+    <div class="field inline-save">
+      <input id="memory-root" placeholder="data/memory" />
+      <button class="primary" onclick="saveMemoryConfig()">Save</button>
+    </div>
+  </div>
+
+  <h3 class="section-divider">Stored data <span class="meta">(read-only)</span></h3>
   <div class="topic-list" id="topic-list"></div>
   <div id="entries"></div>
-  <div class="toolbar">
-    <input id="new-topic" placeholder="topic name" style="max-width: 220px;" />
-    <button class="ghost" onclick="addTopic()">+ New topic</button>
-    <button class="ghost" onclick="addEntry()" id="add-entry-btn" style="display:none">+ Entry to current topic</button>
-  </div>
 </section>
 
 <div id="toast" class="toast"></div>
@@ -138,7 +260,12 @@ document.querySelectorAll("nav button").forEach(b => {
     document.querySelectorAll("section").forEach(x => x.classList.remove("active"));
     b.classList.add("active");
     $("tab-" + b.dataset.tab).classList.add("active");
-    if (b.dataset.tab === "memory") loadTopics();
+    const t = b.dataset.tab;
+    if (t === "brain") loadBrain();
+    if (t === "spirit") loadSpirit();
+    if (t === "skills") loadSkills();
+    if (t === "voice") loadVoice();
+    if (t === "memory") { loadMemoryConfig(); loadTopics(); }
   };
 });
 
@@ -161,28 +288,110 @@ async function api(method, url, body) {
   return r.json();
 }
 
-// --- Env ---
-async function loadEnv() {
-  const data = await api("GET", "/api/env");
-  const wrap = $("env-fields");
-  wrap.innerHTML = "";
-  for (const k of data.keys) {
-    const isSecret = data.secret_keys.includes(k);
-    const row = document.createElement("div");
-    row.className = "row";
-    row.innerHTML = `
-      <label>${k}</label>
-      <div class="field"><input id="env-${k}" type="${isSecret ? "password" : "text"}" /></div>
-    `;
-    wrap.appendChild(row);
-    $("env-" + k).value = data.values[k] || "";
-  }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 }
 
-async function saveEnv() {
+function formatTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.toLocaleString(undefined, {
+    year: "numeric", month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function relativeTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  const diff = Math.round((Date.now() - d.getTime()) / 1000);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return "";
+}
+
+// --- Brain ---
+const PROVIDERS = {
+  mistral: {
+    label: "Mistral",
+    models: ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest", "ministral-8b-latest", "ministral-3b-latest", "codestral-latest", "open-mistral-nemo"],
+    needsApiKey: true,
+    needsBaseUrl: false,
+  },
+  anthropic: {
+    label: "Anthropic",
+    models: ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5"],
+    needsApiKey: true,
+    needsBaseUrl: false,
+  },
+  openai: {
+    label: "OpenAI",
+    models: ["gpt-5", "gpt-4.1", "gpt-4o", "gpt-4o-mini", "o4-mini"],
+    needsApiKey: true,
+    needsBaseUrl: false,
+  },
+  ollama: {
+    label: "Ollama (local)",
+    models: ["llama3.2", "llama3.1", "mistral", "qwen2.5", "phi3.5", "gemma2"],
+    needsApiKey: false,
+    needsBaseUrl: true,
+    modelFreeform: true,
+  },
+};
+
+let brainState = { provider: "mistral", model: "", apiKey: "", baseUrl: "" };
+
+async function loadBrain() {
   const data = await api("GET", "/api/env");
-  const values = {};
-  for (const k of data.keys) values[k] = $("env-" + k).value;
+  brainState = {
+    provider: data.values.BRAIN_PROVIDER || "mistral",
+    model: data.values.BRAIN_MODEL || "",
+    apiKey: data.values.BRAIN_API_KEY || "",
+    baseUrl: data.values.BRAIN_BASE_URL || "",
+  };
+  const psel = $("brain-provider");
+  psel.innerHTML = Object.entries(PROVIDERS)
+    .map(([k, m]) => `<option value="${k}" ${k === brainState.provider ? "selected" : ""}>${m.label}</option>`)
+    .join("");
+  renderBrainFields();
+}
+
+function onProviderChange() {
+  brainState.provider = $("brain-provider").value;
+  renderBrainFields();
+}
+
+function renderBrainFields() {
+  const meta = PROVIDERS[brainState.provider] || PROVIDERS.mistral;
+  const mwrap = $("brain-model-wrap");
+  if (meta.modelFreeform) {
+    mwrap.innerHTML = `
+      <input id="brain-model" list="brain-model-list" value="${escapeHtml(brainState.model || meta.models[0])}" />
+      <datalist id="brain-model-list">${meta.models.map(m => `<option value="${escapeHtml(m)}">`).join("")}</datalist>
+    `;
+  } else {
+    const opts = meta.models.map(m =>
+      `<option value="${escapeHtml(m)}" ${m === brainState.model ? "selected" : ""}>${escapeHtml(m)}</option>`
+    ).join("");
+    mwrap.innerHTML = `<select id="brain-model">${opts}</select>`;
+  }
+  $("brain-key-row").style.display = meta.needsApiKey ? "" : "none";
+  $("brain-api-key").value = brainState.apiKey;
+  $("brain-base-url-row").style.display = meta.needsBaseUrl ? "" : "none";
+  $("brain-base-url").value = brainState.baseUrl;
+}
+
+async function saveBrain() {
+  const values = {
+    BRAIN_PROVIDER: $("brain-provider").value,
+    BRAIN_MODEL: $("brain-model").value,
+    BRAIN_API_KEY: $("brain-api-key").value,
+    BRAIN_BASE_URL: $("brain-base-url").value,
+  };
   await api("PUT", "/api/env", { values });
   toast("Saved");
 }
@@ -193,8 +402,55 @@ let schedules = [];
 async function loadSpirit() {
   const s = await api("GET", "/api/spirit");
   $("spirit-prompt").value = s.system_prompt;
+  $("spirit-prompt-display").textContent = s.system_prompt;
   schedules = s.schedules || [];
   renderSchedules();
+}
+
+function startPromptEdit(wrap) {
+  wrap.classList.add("editing");
+  wrap.querySelector("textarea").focus();
+}
+
+function endPromptEdit(wrap) {
+  wrap.classList.remove("editing");
+  const ta = wrap.querySelector("textarea");
+  wrap.querySelector(".prompt-display").textContent = ta.value;
+}
+
+const DAYS = [
+  { v: "mon", label: "Mon" }, { v: "tue", label: "Tue" }, { v: "wed", label: "Wed" },
+  { v: "thu", label: "Thu" }, { v: "fri", label: "Fri" }, { v: "sat", label: "Sat" },
+  { v: "sun", label: "Sun" },
+];
+
+function detectMode(cron) {
+  const c = cron || {};
+  const keys = Object.keys(c);
+  if (keys.length === 0) return "daily";
+  const onlyTimeOrDay = keys.every(k => k === "hour" || k === "minute" || k === "day_of_week");
+  if (!onlyTimeOrDay) return "custom";
+  if (!("day_of_week" in c)) return "daily";
+  if (c.day_of_week === "mon-fri") return "weekdays";
+  if (typeof c.day_of_week === "string" && /^[a-z]{3}(,[a-z]{3})*$/.test(c.day_of_week)) return "specific";
+  return "custom";
+}
+
+function cronTime(cron) {
+  const c = cron || {};
+  const h = String(parseInt(c.hour, 10) || 0).padStart(2, "0");
+  const m = String(parseInt(c.minute, 10) || 0).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+function buildCron(mode, time, days) {
+  const [hh, mm] = (time || "00:00").split(":").map(x => parseInt(x, 10) || 0);
+  if (mode === "daily") return { hour: hh, minute: mm };
+  if (mode === "weekdays") return { day_of_week: "mon-fri", hour: hh, minute: mm };
+  if (mode === "specific") {
+    return { day_of_week: (days && days.length ? days : ["mon"]).join(","), hour: hh, minute: mm };
+  }
+  return null;
 }
 
 function renderSchedules() {
@@ -203,29 +459,113 @@ function renderSchedules() {
   schedules.forEach((s, i) => {
     const div = document.createElement("div");
     div.className = "schedule";
+    const mode = detectMode(s.cron);
     div.innerHTML = `
-      <div class="row"><label>id</label><div class="field"><input value="${escapeHtml(s.id)}" oninput="schedules[${i}].id = this.value" /></div></div>
-      <div class="row"><label>prompt</label><div class="field"><textarea oninput="schedules[${i}].prompt = this.value">${escapeHtml(s.prompt)}</textarea></div></div>
-      <div class="row"><label>cron (JSON)</label><div class="field">
-        <input value='${escapeHtml(JSON.stringify(s.cron))}' oninput="updateCron(${i}, this.value)" />
-        <div class="hint">APScheduler cron kwargs as JSON. Each field is a number, comma-list, range, or <code>*/N</code>. Common keys: <code>hour</code>, <code>minute</code>, <code>day_of_week</code> (0=mon … 6=sun, or <code>mon-fri</code>), <code>day</code>, <code>month</code>. Examples:
-          <ul>
-            <li><code>{"hour": 8, "minute": 0}</code> — every day at 08:00</li>
-            <li><code>{"hour": "9,18", "minute": 0}</code> — 09:00 and 18:00 daily</li>
-            <li><code>{"day_of_week": "mon-fri", "hour": 7, "minute": 30}</code> — weekdays at 07:30</li>
-            <li><code>{"minute": "*/15"}</code> — every 15 minutes</li>
-            <li><code>{"day_of_week": "sat,sun", "hour": 10}</code> — weekends at 10:00</li>
-          </ul>
-          Omitted fields default to <code>*</code> (any). Times use the server's local timezone.
+      <input class="schedule-title" value="${escapeHtml(s.id)}" placeholder="schedule id" oninput="schedules[${i}].id = this.value" />
+
+      <label class="block-label">Prompt</label>
+      <div class="prompt-wrap">
+        <div class="prompt-display" onclick="startPromptEdit(this.parentNode)">${escapeHtml(s.prompt)}</div>
+        <textarea rows="8" onblur="endPromptEdit(this.parentNode)" oninput="schedules[${i}].prompt = this.value">${escapeHtml(s.prompt)}</textarea>
+      </div>
+
+      <label class="block-label">Schedule</label>
+      <div class="cron-builder">
+        <div class="cron-row">
+          <label>When:</label>
+          <select onchange="setCronMode(${i}, this.value)">
+            <option value="daily" ${mode === "daily" ? "selected" : ""}>Every day</option>
+            <option value="weekdays" ${mode === "weekdays" ? "selected" : ""}>Weekdays (Mon–Fri)</option>
+            <option value="specific" ${mode === "specific" ? "selected" : ""}>Specific days</option>
+            <option value="custom" ${mode === "custom" ? "selected" : ""}>Custom (JSON)</option>
+          </select>
         </div>
-      </div></div>
-      <button class="danger" onclick="removeSchedule(${i})">Delete</button>
+        ${renderCronFields(i, mode, s.cron)}
+        <div class="cron-summary">${cronSummary(s.cron)}</div>
+      </div>
+
+      <div class="toolbar"><button class="danger" onclick="removeSchedule(${i})">Delete schedule</button></div>
     `;
     wrap.appendChild(div);
   });
 }
 
-function updateCron(i, raw) {
+function renderCronFields(i, mode, cron) {
+  if (mode === "custom") {
+    return `
+      <div class="cron-row">
+        <input value='${escapeHtml(JSON.stringify(cron || {}))}' oninput="updateCustomCron(${i}, this.value)" placeholder='{"hour": 8, "minute": 0}' />
+      </div>
+      <div class="hint">APScheduler cron kwargs. Each value can be a number, comma-list, range, or <code>*/N</code>. Examples:
+        <ul>
+          <li><code>{"hour": "9,18", "minute": 0}</code> — 09:00 and 18:00 daily</li>
+          <li><code>{"minute": "*/15"}</code> — every 15 minutes</li>
+          <li><code>{"day": 1, "hour": 9}</code> — first of every month at 09:00</li>
+        </ul>
+      </div>
+    `;
+  }
+  const time = cronTime(cron);
+  const days = (cron && typeof cron.day_of_week === "string")
+    ? cron.day_of_week.split(",").map(s => s.trim())
+    : [];
+  const timeRow = `
+    <div class="cron-row">
+      <label>at</label>
+      <input type="time" value="${time}" onchange="updateCronTime(${i}, this.value)" />
+    </div>
+  `;
+  if (mode === "specific") {
+    const checks = DAYS.map(d => `
+      <input type="checkbox" id="day-${i}-${d.v}" ${days.includes(d.v) ? "checked" : ""} onchange="updateCronDays(${i})" />
+      <label for="day-${i}-${d.v}">${d.label}</label>
+    `).join("");
+    return `
+      <div class="cron-row"><label>on</label><div class="day-toggles">${checks}</div></div>
+      ${timeRow}
+    `;
+  }
+  return timeRow;
+}
+
+function cronSummary(cron) {
+  if (!cron || !Object.keys(cron).length) return "";
+  const parts = [];
+  if ("day_of_week" in cron) parts.push(`day_of_week=${cron.day_of_week}`);
+  if ("day" in cron) parts.push(`day=${cron.day}`);
+  if ("month" in cron) parts.push(`month=${cron.month}`);
+  if ("hour" in cron) parts.push(`hour=${cron.hour}`);
+  if ("minute" in cron) parts.push(`minute=${cron.minute}`);
+  return "→ " + parts.join(", ");
+}
+
+function setCronMode(i, mode) {
+  const current = schedules[i].cron || {};
+  const time = cronTime(current);
+  const days = typeof current.day_of_week === "string"
+    ? current.day_of_week.split(",").map(s => s.trim()).filter(d => /^[a-z]{3}$/.test(d))
+    : [];
+  if (mode !== "custom") schedules[i].cron = buildCron(mode, time, days);
+  renderSchedules();
+}
+
+function updateCronTime(i, time) {
+  const mode = detectMode(schedules[i].cron);
+  const days = typeof schedules[i].cron.day_of_week === "string"
+    ? schedules[i].cron.day_of_week.split(",").map(s => s.trim())
+    : [];
+  schedules[i].cron = buildCron(mode === "custom" ? "daily" : mode, time, days);
+  renderSchedules();
+}
+
+function updateCronDays(i) {
+  const days = DAYS.map(d => d.v).filter(v => $(`day-${i}-${v}`).checked);
+  const time = cronTime(schedules[i].cron);
+  schedules[i].cron = buildCron("specific", time, days);
+  renderSchedules();
+}
+
+function updateCustomCron(i, raw) {
   try { schedules[i].cron = JSON.parse(raw); } catch (e) { /* keep typing */ }
 }
 
@@ -239,6 +579,11 @@ function removeSchedule(i) {
   renderSchedules();
 }
 
+function setSpiritSub(name) {
+  document.querySelectorAll("#tab-spirit .subnav button").forEach(b => b.classList.toggle("active", b.dataset.sub === name));
+  document.querySelectorAll("#tab-spirit .subsection").forEach(s => s.classList.toggle("active", s.id === "spirit-sub-" + name));
+}
+
 async function saveSpirit() {
   await api("PUT", "/api/spirit", {
     system_prompt: $("spirit-prompt").value,
@@ -247,8 +592,110 @@ async function saveSpirit() {
   toast("Saved");
 }
 
-// --- Memory ---
+// --- Skills (read-only) ---
+async function loadSkills() {
+  const skills = await api("GET", "/api/skills");
+  const wrap = $("skills-list");
+  wrap.innerHTML = "";
+  skills.forEach(s => {
+    const div = document.createElement("div");
+    div.className = "skill-card";
+    div.innerHTML = `
+      <h3 class="skill-name">${escapeHtml(s.name)}</h3>
+      ${s.tools.map(t => `
+        <div class="tool">
+          <div class="tool-name">${escapeHtml(t.name)}</div>
+          <div class="tool-desc">${escapeHtml(t.description)}</div>
+          <details class="tool-schema">
+            <summary>input schema</summary>
+            <div class="kv">${renderKV(t.input_schema)}</div>
+          </details>
+        </div>
+      `).join("")}
+    `;
+    wrap.appendChild(div);
+  });
+}
+
+// --- Voice ---
+async function loadVoice() {
+  const data = await api("GET", "/api/env");
+  $("tg-token").value = data.values.TELEGRAM_TOKEN || "";
+  $("tg-chat-id").value = data.values.TELEGRAM_CHAT_ID || "";
+  await loadVoiceMessages();
+}
+
+async function saveVoice() {
+  await api("PUT", "/api/env", {
+    values: {
+      TELEGRAM_TOKEN: $("tg-token").value,
+      TELEGRAM_CHAT_ID: $("tg-chat-id").value,
+    },
+  });
+  toast("Saved");
+}
+
+async function voiceSend() {
+  const text = $("voice-send-text").value.trim();
+  if (!text) return;
+  await api("POST", "/api/voice/send", { text });
+  $("voice-send-text").value = "";
+  toast("Sent");
+  await loadVoiceMessages();
+}
+
+async function loadVoiceMessages() {
+  const wrap = $("voice-messages");
+  let entries;
+  try {
+    entries = await api("GET", "/api/memory/conversation");
+  } catch (e) {
+    wrap.innerHTML = `<div class="meta">No conversation history yet.</div>`;
+    return;
+  }
+  entries.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+  entries = entries.slice(0, 20);
+  wrap.innerHTML = entries.map(e => {
+    const role = (e.data && e.data.role) || "assistant";
+    const cls = "entry msg-" + (["user", "assistant", "tool"].includes(role) ? role : "assistant");
+    return `
+      <div class="${cls}">
+        <div class="entry-header">
+          <span class="when">${formatTime(e.created_at)}</span>
+          <span class="when-rel">${relativeTime(e.created_at)}</span>
+        </div>
+        ${renderChatBubble(e.data)}
+      </div>
+    `;
+  }).join("");
+}
+
+// --- Memory (read-only) ---
 let currentTopic = null;
+
+async function loadMemoryConfig() {
+  const data = await api("GET", "/api/env");
+  $("memory-root").value = data.values.MEMORY_ROOT || "";
+}
+
+async function saveMemoryConfig() {
+  await api("PUT", "/api/env", { values: { MEMORY_ROOT: $("memory-root").value } });
+  await restartBot();
+}
+
+async function restartBot() {
+  let res;
+  try {
+    res = await api("POST", "/api/restart");
+  } catch (e) {
+    toast("Saved — restart bot manually to apply", true);
+    return;
+  }
+  if (res.status === "signaled") toast("Saved — bot restarting…");
+  else if (res.status === "not_running") toast("Saved — bot was not running");
+  else if (res.status === "stale") toast("Saved — bot was already stopped");
+  else toast("Saved");
+}
 
 async function loadTopics() {
   const topics = await api("GET", "/api/memory/topics");
@@ -266,71 +713,46 @@ async function loadTopics() {
   } else {
     currentTopic = null;
     $("entries").innerHTML = "";
-    $("add-entry-btn").style.display = "none";
   }
 }
 
 async function selectTopic(t) {
   currentTopic = t;
-  $("add-entry-btn").style.display = "inline-block";
   await loadTopics();
   await loadEntries();
 }
 
-let editingId = null;
-
 async function loadEntries() {
   const entries = await api("GET", `/api/memory/${currentTopic}`);
   entries.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
-  const hideId = currentTopic === "conversation";
   const isConvo = currentTopic === "conversation";
+  const hideId = isConvo;
   const wrap = $("entries");
   wrap.innerHTML = "";
   entries.forEach(e => {
     const div = document.createElement("div");
-    const isEditing = editingId === e.id;
     let cls = "entry";
-    if (isConvo && !isEditing) {
+    if (isConvo) {
       const role = (e.data && e.data.role) || "assistant";
       cls += " msg-" + (["user", "assistant", "tool"].includes(role) ? role : "assistant");
     }
     div.className = cls;
     const edited = e.updated_at && e.updated_at !== e.created_at;
-
-    let body;
-    if (isEditing) {
-      const dataStr = JSON.stringify(e.data, null, 2);
-      body = `
-        <div class="row"><label>data (JSON)</label><div class="field"><textarea rows="6" id="entry-${e.id}">${escapeHtml(dataStr)}</textarea></div></div>
-        <div class="toolbar">
-          <button class="primary" onclick="saveEntry('${e.id}')">Save</button>
-          <button class="ghost" onclick="cancelEdit()">Cancel</button>
-        </div>
-      `;
-    } else {
-      const view = isConvo ? renderChatBubble(e.data) : `<div class="kv">${renderKV(e.data)}</div>`;
-      body = `
-        ${view}
-        <div class="toolbar">
-          <button class="ghost" onclick="editEntry('${e.id}')">Edit</button>
-          <button class="danger" onclick="deleteEntry('${e.id}')">Delete</button>
-        </div>
-      `;
-    }
-
+    const view = isConvo ? renderChatBubble(e.data) : `<div class="kv">${renderKV(e.data)}</div>`;
     div.innerHTML = `
       <div class="entry-header">
         <span class="when">${formatTime(e.created_at)}</span>
         <span class="when-rel">${relativeTime(e.created_at)}</span>
         ${edited ? `<span class="when-edited" title="${escapeHtml(formatTime(e.updated_at))}">· edited ${relativeTime(e.updated_at)}</span>` : ""}
       </div>
-      ${body}
+      ${view}
       ${hideId ? "" : `<div class="meta">id: ${e.id}</div>`}
     `;
     wrap.appendChild(div);
   });
 }
 
+// --- Renderers shared between Memory and Voice ---
 function renderKV(value) {
   if (value === null || value === undefined) return `<span class="v-null">${value === null ? "null" : "—"}</span>`;
   if (typeof value === "boolean") return `<span class="v-bool">${value}</span>`;
@@ -365,76 +787,7 @@ function renderChatBubble(data) {
   `;
 }
 
-function formatTime(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d)) return iso;
-  return d.toLocaleString(undefined, {
-    year: "numeric", month: "short", day: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
-}
-
-function relativeTime(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d)) return "";
-  const diff = Math.round((Date.now() - d.getTime()) / 1000);
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return "";
-}
-
-function editEntry(id) {
-  editingId = id;
-  loadEntries();
-}
-
-function cancelEdit() {
-  editingId = null;
-  loadEntries();
-}
-
-async function saveEntry(id) {
-  let data;
-  try { data = JSON.parse($("entry-" + id).value); }
-  catch (e) { toast("Invalid JSON", true); return; }
-  await api("PUT", `/api/memory/${currentTopic}/${id}`, { data });
-  editingId = null;
-  toast("Saved");
-  await loadEntries();
-}
-
-async function deleteEntry(id) {
-  if (!confirm("Delete this entry?")) return;
-  await api("DELETE", `/api/memory/${currentTopic}/${id}`);
-  if (editingId === id) editingId = null;
-  await loadEntries();
-}
-
-async function addEntry() {
-  const res = await api("POST", `/api/memory/${currentTopic}`, { data: {} });
-  editingId = res.id;
-  await loadEntries();
-}
-
-async function addTopic() {
-  const name = $("new-topic").value.trim();
-  if (!name) return;
-  await api("POST", `/api/memory/${name}`, { data: {} });
-  $("new-topic").value = "";
-  currentTopic = name;
-  await loadTopics();
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-}
-
 // --- Init ---
-loadEnv();
 loadSpirit();
 </script>
 </body>
