@@ -32,58 +32,58 @@ class Supervisor:
     async def autowake_enabled(self) -> None:
         for spec in self._store.list_enabled():
             try:
-                await self.awake(spec.name)
+                await self.awake(spec.id)
             except Exception as exc:  # noqa: BLE001 — keep other golems running
-                print(f"[forge] failed to awake {spec.name!r}: {exc}", file=sys.stderr)
+                print(f"[forge] failed to awake {spec.id!r}: {exc}", file=sys.stderr)
 
     async def shutdown(self) -> None:
-        for name in list(self._procs.keys()):
+        for id_ in list(self._procs.keys()):
             try:
-                await self.sleep(name)
+                await self.sleep(id_)
             except Exception as exc:  # noqa: BLE001
-                print(f"[forge] error sleeping {name!r}: {exc}", file=sys.stderr)
+                print(f"[forge] error sleeping {id_!r}: {exc}", file=sys.stderr)
 
     # ---- Per-golem lifecycle ----
 
-    def is_awake(self, name: str) -> bool:
-        proc = self._procs.get(name)
+    def is_awake(self, id_: str) -> bool:
+        proc = self._procs.get(id_)
         if proc is None:
             return False
         if proc.poll() is not None:
             # Child has exited; reap it.
-            del self._procs[name]
+            del self._procs[id_]
             return False
         return True
 
-    def running_names(self) -> set[str]:
-        return {name for name in list(self._procs.keys()) if self.is_awake(name)}
+    def running_ids(self) -> set[str]:
+        return {id_ for id_ in list(self._procs.keys()) if self.is_awake(id_)}
 
-    async def awake(self, name: str) -> None:
-        if self.is_awake(name):
+    async def awake(self, id_: str) -> None:
+        if self.is_awake(id_):
             return
         # Verify the spec exists before spawning, so we get a clear error here
         # instead of via the child's exit code.
-        self._store.get_golem(name)
+        self._store.get_golem(id_)
         proc = subprocess.Popen(
-            [sys.executable, "-m", "forge.runner", name],
+            [sys.executable, "-m", "forge.runner", id_],
             # Inherit stdout/stderr so child logs land in the forge's terminal
             # (or systemd's journal when running as a service).
         )
-        self._procs[name] = proc
+        self._procs[id_] = proc
 
         # Brief probe: if the child immediately failed (e.g. invalid telegram
         # token, missing brain api key), surface that synchronously instead of
         # leaving the user wondering why the badge keeps flipping back to sleeping.
         await asyncio.sleep(_STARTUP_PROBE_S)
         if proc.poll() is not None:
-            del self._procs[name]
+            del self._procs[id_]
             raise RuntimeError(
-                f"golem {name!r} exited immediately (code {proc.returncode}); "
+                f"golem {id_!r} exited immediately (code {proc.returncode}); "
                 "check the forge's stderr for details"
             )
 
-    async def sleep(self, name: str) -> None:
-        proc = self._procs.pop(name, None)
+    async def sleep(self, id_: str) -> None:
+        proc = self._procs.pop(id_, None)
         if proc is None:
             return
         if proc.poll() is not None:
@@ -95,13 +95,12 @@ class Supervisor:
             proc.kill()
             await asyncio.to_thread(proc.wait)
 
-    async def reshape(self, name: str, new_name: str | None = None) -> None:
+    async def reshape(self, id_: str) -> None:
         """Restart the running child with the current stored spec.
 
-        Pass `new_name` if the golem was renamed in the store; the new child
-        is spawned under the new key.
+        Since `id` is stable, the new child re-spawns under the same key.
         """
-        if not self.is_awake(name):
+        if not self.is_awake(id_):
             return
-        await self.sleep(name)
-        await self.awake(new_name or name)
+        await self.sleep(id_)
+        await self.awake(id_)

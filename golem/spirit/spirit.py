@@ -1,7 +1,7 @@
-"""Spirit: per-golem system prompt + scheduled actions.
+"""Spirit: per-golem mission prompt + recurring routines.
 
 The data lives in the forge store (one row per golem). `Spirit` is a thin
-view bound to a specific golem name; it re-reads from the store on every
+view bound to a specific golem id; it re-reads from the store on every
 property access so edits made via the forge UI are picked up by the running
 body without a restart (the body uses `version` to detect changes).
 """
@@ -15,41 +15,42 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
-class Schedule:
+class Routine:
     id: str
     cron: dict[str, Any]   # apscheduler cron kwargs (hour, minute, day_of_week, ...)
     prompt: str            # what to ask the Brain when this fires
+    name: str = ""         # human-readable label; falls back to `id` in UI
 
 
 class InvalidCronError(ValueError):
-    """Raised when a Schedule's cron kwargs aren't accepted by APScheduler."""
+    """Raised when a Routine's cron kwargs aren't accepted by APScheduler."""
 
 
-def validate_cron(cron: dict[str, Any], schedule_id: str = "") -> None:
+def validate_cron(cron: dict[str, Any], routine_id: str = "") -> None:
     """Raise InvalidCronError if `cron` isn't a valid APScheduler CronTrigger spec."""
     try:
         CronTrigger(**cron)
     except (TypeError, ValueError) as exc:
-        prefix = f"schedule {schedule_id!r}: " if schedule_id else ""
+        prefix = f"routine {routine_id!r}: " if routine_id else ""
         raise InvalidCronError(f"{prefix}invalid cron {cron!r} ({exc})") from exc
 
 
 class Spirit:
-    """Live view of one golem's system prompt + schedules, backed by the forge store."""
+    """Live view of one golem's mission prompt + routines, backed by the forge store."""
 
-    def __init__(self, store: "ForgeStore", name: str):
+    def __init__(self, store: "ForgeStore", id_: str):
         self._store = store
-        self._name = name
+        self._id = id_
 
     @property
-    def system_prompt(self) -> str:
-        return self._store.get_golem(self._name).system_prompt
+    def mission(self) -> str:
+        return self._store.get_golem(self._id).mission
 
     @property
-    def schedules(self) -> list[Schedule]:
-        return list(self._store.get_golem(self._name).schedules)
+    def routines(self) -> list[Routine]:
+        return list(self._store.get_golem(self._id).routines)
 
     @property
     def version(self) -> int:
         """Bumps on every store update; used to detect changes for hot-reload."""
-        return self._store.get_golem(self._name).version
+        return self._store.get_golem(self._id).version

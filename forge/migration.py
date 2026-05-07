@@ -13,7 +13,7 @@ from forge.store import (
     GolemSpec,
     TelegramSpec,
 )
-from golem.spirit.spirit import Schedule
+from golem.spirit.spirit import Routine
 
 
 _LEGACY_ENV = Path(".env")
@@ -51,14 +51,14 @@ def migrate_legacy_if_needed(store: ForgeStore) -> str | None:
         ),
     )
 
-    system_prompt = ""
-    schedules: tuple[Schedule, ...] = ()
+    mission = ""
+    routines: tuple[Routine, ...] = ()
     if _LEGACY_SPIRIT.exists():
         try:
             payload = json.loads(_LEGACY_SPIRIT.read_text(encoding="utf-8"))
-            system_prompt = str(payload.get("system_prompt", ""))
-            schedules = tuple(
-                Schedule(
+            mission = str(payload.get("system_prompt", ""))
+            routines = tuple(
+                Routine(
                     id=str(s["id"]),
                     cron=dict(s.get("cron", {})),
                     prompt=str(s.get("prompt", "")),
@@ -69,12 +69,13 @@ def migrate_legacy_if_needed(store: ForgeStore) -> str | None:
             print(f"[forge] could not parse {_LEGACY_SPIRIT}: {exc}", file=sys.stderr)
 
     spec = GolemSpec(
+        id="default",
         name="default",
         enabled=True,
         brain=brain,
         dialog=dialog,
-        system_prompt=system_prompt,
-        schedules=schedules,
+        mission=mission,
+        routines=routines,
         skills=("memory", "open_meteo"),
     )
     store.create_golem(spec)

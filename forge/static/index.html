@@ -22,17 +22,6 @@
   }
   h1 { margin: 0 0 16px; font-size: 22px; }
   h3 { margin: 0 0 12px; font-size: 15px; }
-  header.golem-bar {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    padding: 12px 14px; margin: 0 0 20px;
-    background: white; border: 1px solid var(--border); border-radius: 6px;
-  }
-  header.golem-bar select {
-    flex: 0 1 220px; padding: 6px 10px; font-size: 14px;
-    border: 1px solid var(--border); border-radius: 4px; background: white;
-  }
-  header.golem-bar .grow { flex: 1; }
-  header.golem-bar label.toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
   nav { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
   nav button {
     background: none; border: none; padding: 10px 16px;
@@ -57,24 +46,27 @@
   }
   button.danger { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
   button.ghost { background: white; border: 1px solid var(--border); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
-  .schedule, .entry, .skill-card {
+  .routine, .entry, .skill-card {
     border: 1px solid var(--border); border-radius: 6px;
     padding: 14px; margin-bottom: 12px; background: white;
   }
-  .schedule-title {
+  .routine-title {
     font-size: 16px; font-weight: 600; color: var(--accent);
     border: 1px solid transparent; background: transparent;
     padding: 4px 6px; margin: -4px -6px 12px; border-radius: 4px;
     width: calc(100% + 12px);
   }
-  .schedule-title:hover { border-color: var(--border); background: #fafafa; }
-  .schedule-title:focus { border-color: var(--accent); background: white; outline: none; }
-  .block-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 14px 0 4px; }
-  .cron-builder { display: flex; flex-direction: column; gap: 8px; }
-  .cron-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .cron-row label { font-size: 13px; color: var(--muted); }
-  .cron-row input[type=time], .cron-row input[type=number] { width: auto; max-width: 120px; }
-  .cron-row select { width: auto; max-width: 220px; }
+  .routine-title:hover { border-color: var(--border); background: #fafafa; }
+  .routine-title:focus { border-color: var(--accent); background: white; outline: none; }
+  .routine-id-row { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+  .routine-id-row label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .routine-id { flex: 1; font-family: ui-monospace, monospace; padding: 4px 8px; font-size: 12px; }
+  .cron-builder { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .cron-builder > label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .cron-builder .inline-label { font-size: 13px; color: var(--muted); }
+  .cron-builder input[type=time], .cron-builder input[type=number] { width: auto; max-width: 120px; }
+  .cron-builder input[type=text] { width: auto; flex: 1; min-width: 200px; }
+  .cron-builder select { width: auto; max-width: 220px; }
   .day-toggles { display: flex; gap: 4px; flex-wrap: wrap; }
   .day-toggles input[type=checkbox] { display: none; }
   .day-toggles label {
@@ -173,19 +165,26 @@
     color: var(--fg);
   }
   .golem-list a:hover { border-color: var(--accent); }
-  .golem-item-name { font-size: 16px; font-weight: 600; flex: 1; }
+  .golem-item-body { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .golem-item-name { font-size: 16px; font-weight: 600; }
   .golem-item-meta { font-size: 13px; color: var(--muted); }
+  .golem-item-actions { display: flex; gap: 6px; }
+  .golem-item-actions button { font-size: 13px; padding: 4px 10px; }
   .list-toolbar { display: flex; justify-content: flex-end; margin-bottom: 16px; }
-  a.back-link {
-    display: inline-flex; align-items: center; gap: 4px;
-    text-decoration: none; color: var(--muted); font-size: 14px;
-    padding: 6px 0;
+  a.back-arrow {
+    text-decoration: none; color: var(--muted);
+    margin-right: 10px;
+    font-weight: 400;
   }
-  a.back-link:hover { color: var(--accent); }
+  a.back-arrow:hover { color: var(--accent); }
+  h1 { display: flex; align-items: baseline; }
 </style>
 </head>
 <body>
-<h1 id="page-title">Forge</h1>
+<h1 id="page-title">
+  <a id="back-link" href="/" class="back-arrow" onclick="goToList(event)" style="display:none" title="Back to Forge">←</a>
+  <span id="page-title-text">Forge</span>
+</h1>
 
 <div id="view-list">
   <div class="list-toolbar">
@@ -199,16 +198,6 @@
 </div>
 
 <div id="view-detail" style="display:none">
-<header class="golem-bar">
-  <a href="/" class="back-link" onclick="goToList(event)">← Forge</a>
-  <span id="state-badge" class="state-badge"></span>
-  <span class="grow"></span>
-  <label class="toggle"><input type="checkbox" id="golem-enabled" onchange="toggleEnabled()" /> autowake</label>
-  <button id="wake-btn" class="primary" onclick="wakeCurrent()">Wake</button>
-  <button id="sleep-btn" class="ghost" onclick="sleepCurrent()">Sleep</button>
-  <button class="danger" onclick="deleteCurrentGolem()">Delete</button>
-</header>
-
 <div id="golem-editor">
 <nav>
   <button data-tab="spirit" class="active">Spirit</button>
@@ -220,14 +209,17 @@
 
 <section id="tab-spirit" class="tab active">
   <div class="row"><label>Name</label>
-    <div class="field inline-save">
-      <input id="golem-name" />
-      <button class="primary" onclick="saveName()">Rename</button>
-    </div>
+    <div class="field"><input id="golem-name" /></div>
   </div>
-  <div class="subnav">
-    <button data-sub="prompt" class="active" onclick="setSpiritSub('prompt')">System prompt</button>
-    <button data-sub="schedules" onclick="setSpiritSub('schedules')">Schedules</button>
+  <div class="row"><label>Description</label>
+    <div class="field"><input id="golem-description" placeholder="Short description (one line)" /></div>
+  </div>
+  <div class="toolbar">
+    <button class="primary" onclick="saveIdentity()">Save</button>
+  </div>
+  <div class="subnav" style="margin-top: 24px">
+    <button data-sub="prompt" class="active" onclick="setSpiritSub('prompt')">Mission</button>
+    <button data-sub="routines" onclick="setSpiritSub('routines')">Routines</button>
   </div>
 
   <div id="spirit-sub-prompt" class="subsection active">
@@ -240,10 +232,10 @@
     </div>
   </div>
 
-  <div id="spirit-sub-schedules" class="subsection">
-    <div id="schedules"></div>
+  <div id="spirit-sub-routines" class="subsection">
+    <div id="routines"></div>
     <div class="toolbar">
-      <button class="ghost" onclick="addSchedule()">+ Schedule</button>
+      <button class="ghost" onclick="addRoutine()">+ Routine</button>
       <button class="primary" onclick="saveSpirit()">Save</button>
     </div>
   </div>
@@ -310,8 +302,6 @@
 </section>
 
 <section id="tab-memory" class="tab">
-  <div class="meta">Stored at <code id="memory-path-meta"></code></div>
-  <h3 class="section-divider">Stored data <span class="meta">(read-only)</span></h3>
   <div class="topic-list" id="topic-list"></div>
   <div id="entries"></div>
 </section>
@@ -323,11 +313,11 @@
 <script>
 const $ = (id) => document.getElementById(id);
 
-let golems = [];        // [{name, enabled, brain, dialog_kind, skill_count}, ...]
+let golems = [];        // [{id, name, description, enabled, brain, dialog_kind, skill_count}, ...]
 let current = null;     // full GolemSpec object for the selected golem
-let currentUrlName = null; // the name segment in the URL (what we PUT to)
+let currentId = null;   // the id segment in the URL (what we PUT to)
 let registry = { available: [], describe: [] };
-let schedules = [];     // current.schedules, kept in sync
+let routines = [];      // current.routines, kept in sync
 
 // --- API helper ---
 
@@ -343,11 +333,13 @@ async function api(method, url, body) {
   return r.json();
 }
 
+let _toastTimer = null;
 function toast(msg, error = false) {
   const t = $("toast");
   t.textContent = msg;
   t.className = "toast show" + (error ? " error" : "");
-  setTimeout(() => t.className = "toast", 2000);
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.className = "toast", error ? 10000 : 2000);
 }
 
 function escapeHtml(s) {
@@ -378,10 +370,15 @@ function relativeTime(iso) {
 
 // --- Routing ---
 
+const TABS = ["spirit", "memory", "brain", "skills", "dialog"];
+const DEFAULT_TAB = "spirit";
+
 function currentRoute() {
-  const m = window.location.pathname.match(/^\/golem\/(.+)$/);
-  if (m) return { view: "detail", name: decodeURIComponent(m[1]) };
-  return { view: "list" };
+  const parts = window.location.pathname.split("/").filter(Boolean);
+  if (parts.length === 0) return { view: "list" };
+  const id = decodeURIComponent(parts[0]);
+  const tab = parts[1] && TABS.includes(parts[1]) ? parts[1] : DEFAULT_TAB;
+  return { view: "detail", id, tab };
 }
 
 function navigate(path, replace = false) {
@@ -395,9 +392,9 @@ function goToList(e) {
   navigate("/");
 }
 
-function openGolem(e, name) {
+function openGolem(e, id) {
   if (e) e.preventDefault();
-  navigate(`/golem/${encodeURIComponent(name)}`);
+  navigate(`/${encodeURIComponent(id)}`);
 }
 
 async function applyRoute() {
@@ -407,8 +404,12 @@ async function applyRoute() {
     await loadGolemList();
   } else {
     showDetailView();
+    if (current && currentId === route.id) {
+      selectTab(route.tab);
+      return;
+    }
     try {
-      await loadCurrent(route.name);
+      await loadCurrent(route.id, route.tab);
     } catch (e) {
       navigate("/", true);
     }
@@ -417,14 +418,16 @@ async function applyRoute() {
 
 function showListView() {
   current = null;
-  currentUrlName = null;
-  $("page-title").textContent = "Forge";
+  currentId = null;
+  $("page-title-text").textContent = "Forge";
+  $("back-link").style.display = "none";
   document.title = "Forge";
   $("view-list").style.display = "";
   $("view-detail").style.display = "none";
 }
 
 function showDetailView() {
+  $("back-link").style.display = "";
   $("view-list").style.display = "none";
   $("view-detail").style.display = "";
 }
@@ -447,140 +450,146 @@ async function loadGolemList() {
   wrap.innerHTML = golems.map(g => {
     const stateClass = g.running ? "running" : "sleeping";
     const stateText = g.running ? "running" : "sleeping";
-    const brain = [g.brain.provider, g.brain.model].filter(Boolean).join(" · ");
-    const skills = `${g.skill_count} skill${g.skill_count === 1 ? "" : "s"}`;
-    const meta = [brain, skills].filter(Boolean).join(" · ");
-    const href = `/golem/${encodeURIComponent(g.name)}`;
+    const description = g.description || "";
+    const href = `/${encodeURIComponent(g.id)}`;
+    const wakeAction = g.running
+      ? `<button class="ghost" data-action="sleep" data-id="${escapeHtml(g.id)}">Sleep</button>`
+      : `<button class="primary" data-action="awake" data-id="${escapeHtml(g.id)}">Wake</button>`;
+    const deleteAction = `<button class="danger" data-action="delete" data-id="${escapeHtml(g.id)}" data-name="${escapeHtml(g.name)}">Delete</button>`;
     return `
       <li>
-        <a href="${href}" class="golem-link" data-name="${escapeHtml(g.name)}">
+        <a href="${href}" class="golem-link" data-id="${escapeHtml(g.id)}">
           <span class="state-badge ${stateClass}">${stateText}</span>
-          <span class="golem-item-name">${escapeHtml(g.name)}</span>
-          <span class="golem-item-meta">${escapeHtml(meta)}</span>
+          <span class="golem-item-body">
+            <span class="golem-item-name">${escapeHtml(g.name)}</span>
+            ${description ? `<span class="golem-item-meta">${escapeHtml(description)}</span>` : ""}
+          </span>
+          <span class="golem-item-actions">${wakeAction}${deleteAction}</span>
         </a>
       </li>
     `;
   }).join("");
   wrap.querySelectorAll("a.golem-link").forEach(a => {
     a.addEventListener("click", (e) => {
+      // Action buttons within the link should not navigate.
+      const btn = e.target.closest("button[data-action]");
+      if (btn) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleListAction(btn.dataset.action, btn.dataset.id, btn.dataset.name);
+        return;
+      }
       e.preventDefault();
-      navigate(`/golem/${encodeURIComponent(a.dataset.name)}`);
+      navigate(`/${encodeURIComponent(a.dataset.id)}`);
     });
   });
 }
 
-async function loadCurrent(name) {
-  currentUrlName = name;
-  current = await api("GET", `/api/golems/${encodeURIComponent(name)}`);
-  schedules = current.schedules || [];
-  $("golem-enabled").checked = !!current.enabled;
-  $("golem-name").value = current.name;
-  $("page-title").textContent = `Golem ${current.name}`;
-  document.title = `Golem ${current.name}`;
-  renderRunningState();
-  // Refresh whichever tab is active
-  const active = document.querySelector("nav button.active");
-  if (active) refreshTab(active.dataset.tab);
-}
-
-function renderRunningState() {
-  const running = !!(current && current.running);
-  const badge = $("state-badge");
-  badge.textContent = running ? "running" : "sleeping";
-  badge.className = "state-badge " + (running ? "running" : "sleeping");
-  $("wake-btn").style.display = running ? "none" : "";
-  $("sleep-btn").style.display = running ? "" : "none";
-}
-
-async function wakeCurrent() {
-  if (!current) return;
+async function handleListAction(action, id, name) {
   try {
-    await api("POST", `/api/golems/${encodeURIComponent(currentUrlName)}/awake`);
-  } catch (e) { return; }
-  await loadCurrent(currentUrlName);
-  toast("Awake");
+    if (action === "awake") {
+      await api("POST", `/api/golems/${encodeURIComponent(id)}/awake`);
+      toast("Awake");
+    } else if (action === "sleep") {
+      await api("POST", `/api/golems/${encodeURIComponent(id)}/sleep`);
+      toast("Sleeping");
+    } else if (action === "delete") {
+      if (!confirm(`Delete golem "${name}"? The memory file at data/${id}/memory.json will be left on disk.`)) return;
+      await api("DELETE", `/api/golems/${encodeURIComponent(id)}`);
+      toast("Deleted");
+    }
+  } catch (e) { /* api() already toasted */ }
+  await loadGolemList();
 }
 
-async function sleepCurrent() {
-  if (!current) return;
-  await api("POST", `/api/golems/${encodeURIComponent(currentUrlName)}/sleep`);
-  await loadCurrent(currentUrlName);
-  toast("Sleeping");
+async function loadCurrent(id, tab) {
+  currentId = id;
+  current = await api("GET", `/api/golems/${encodeURIComponent(id)}`);
+  routines = current.routines || [];
+  $("golem-name").value = current.name;
+  $("golem-description").value = current.description || "";
+  $("page-title-text").textContent = current.name;
+  document.title = current.name;
+  selectTab(tab || DEFAULT_TAB);
+}
+
+function selectTab(tab) {
+  if (!TABS.includes(tab)) tab = DEFAULT_TAB;
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("active", x.dataset.tab === tab));
+  document.querySelectorAll("section.tab").forEach(x => x.classList.toggle("active", x.id === "tab-" + tab));
+  refreshTab(tab);
 }
 
 async function newGolemFlow() {
-  const name = (prompt("Name for the new golem (letters, digits, _ -):") || "").trim();
+  const name = (prompt("Name for the new golem:") || "").trim();
   if (!name) return;
+  let created;
   try {
-    await api("POST", "/api/golems", emptyGolem(name));
+    created = await api("POST", "/api/golems", emptyGolem(name));
   } catch (e) { return; }
-  navigate(`/golem/${encodeURIComponent(name)}`);
+  navigate(`/${encodeURIComponent(created.id)}`);
   toast("Created — fill in brain + dialog and enable.");
 }
 
-async function deleteCurrentGolem() {
-  if (!current) return;
-  if (!confirm(`Delete golem "${current.name}"? The memory file at data/${current.name}/memory.json will be left on disk.`)) return;
-  await api("DELETE", `/api/golems/${encodeURIComponent(currentUrlName)}`);
-  toast("Deleted");
-  navigate("/");
-}
-
-async function toggleEnabled() {
-  if (!current) return;
-  current.enabled = $("golem-enabled").checked;
-  await saveCurrent();
-}
-
-async function saveName() {
+async function saveIdentity() {
   if (!current) return;
   const newName = $("golem-name").value.trim();
-  if (!newName || newName === current.name) return;
+  const newDescription = $("golem-description").value.trim();
+  if (!newName) {
+    toast("Name cannot be empty", true);
+    return;
+  }
   current.name = newName;
-  await saveCurrent(newName);
+  current.description = newDescription;
+  await saveCurrent();
+  toast("Saved");
 }
 
 function emptyGolem(name) {
   return {
+    id: "",
     name,
+    description: "",
     enabled: false,
     brain: { provider: "mistral", model: "", api_key: "", base_url: "" },
     dialog: { kind: "telegram", telegram: { token: "", chat_id: 0 } },
-    system_prompt: "",
-    schedules: [],
+    mission: "",
+    routines: [],
     skills: [],
   };
 }
 
 async function saveCurrent() {
   // Send the full spec back. The server replaces it wholesale.
-  const url = `/api/golems/${encodeURIComponent(currentUrlName)}`;
+  // The id is immutable: we PUT to /api/golems/{currentId} and the URL never changes.
+  const url = `/api/golems/${encodeURIComponent(currentId)}`;
   const payload = {
+    id: current.id,
     name: current.name,
+    description: current.description || "",
     enabled: current.enabled,
     brain: current.brain,
     dialog: current.dialog,
-    system_prompt: current.system_prompt,
-    schedules,
+    mission: current.mission,
+    routines,
     skills: current.skills,
   };
   await api("PUT", url, payload);
-  const newName = current.name;
-  if (newName !== currentUrlName) {
-    history.replaceState({}, "", `/golem/${encodeURIComponent(newName)}`);
-  }
-  await loadCurrent(newName);
+  await loadCurrent(currentId);
 }
 
 // --- Tabs ---
 
 document.querySelectorAll("nav button").forEach(b => {
   b.onclick = () => {
-    document.querySelectorAll("nav button").forEach(x => x.classList.remove("active"));
-    document.querySelectorAll("section.tab").forEach(x => x.classList.remove("active"));
-    b.classList.add("active");
-    $("tab-" + b.dataset.tab).classList.add("active");
-    refreshTab(b.dataset.tab);
+    const tab = b.dataset.tab;
+    selectTab(tab);
+    if (currentId) {
+      const path = tab === DEFAULT_TAB
+        ? `/${encodeURIComponent(currentId)}`
+        : `/${encodeURIComponent(currentId)}/${tab}`;
+      if (window.location.pathname !== path) history.pushState({}, "", path);
+    }
   };
 });
 
@@ -590,7 +599,7 @@ function refreshTab(name) {
   if (name === "spirit") renderSpiritTab();
   if (name === "skills") renderSkillsTab();
   if (name === "dialog") { renderDialogTab(); loadDialogMessages(); }
-  if (name === "memory") { $("memory-path-meta").textContent = `data/${current.name}/memory.json`; loadTopics(); }
+  if (name === "memory") loadTopics();
 }
 
 // --- Brain ---
@@ -665,10 +674,10 @@ async function saveBrain() {
 // --- Spirit ---
 
 function renderSpiritTab() {
-  $("spirit-prompt").value = current.system_prompt || "";
-  $("spirit-prompt-display").textContent = current.system_prompt || "";
-  schedules = current.schedules || [];
-  renderSchedules();
+  $("spirit-prompt").value = current.mission || "";
+  $("spirit-prompt-display").textContent = current.mission || "";
+  routines = current.routines || [];
+  renderRoutines();
 }
 
 function startPromptEdit(wrap) {
@@ -717,38 +726,34 @@ function buildCron(mode, time, days) {
   return null;
 }
 
-function renderSchedules() {
-  const wrap = $("schedules");
+function renderRoutines() {
+  const wrap = $("routines");
   wrap.innerHTML = "";
-  schedules.forEach((s, i) => {
+  routines.forEach((r, i) => {
     const div = document.createElement("div");
-    div.className = "schedule";
-    const mode = detectMode(s.cron);
+    div.className = "routine";
+    const mode = detectMode(r.cron);
     div.innerHTML = `
-      <input class="schedule-title" value="${escapeHtml(s.id)}" placeholder="schedule id" oninput="schedules[${i}].id = this.value" />
+      <input class="routine-title" value="${escapeHtml(r.name || r.id)}" placeholder="routine name" oninput="routines[${i}].name = this.value" />
 
-      <label class="block-label">Prompt</label>
       <div class="prompt-wrap">
-        <div class="prompt-display" onclick="startPromptEdit(this.parentNode)">${escapeHtml(s.prompt)}</div>
-        <textarea rows="8" onblur="endPromptEdit(this.parentNode)" oninput="schedules[${i}].prompt = this.value">${escapeHtml(s.prompt)}</textarea>
+        <div class="prompt-display" onclick="startPromptEdit(this.parentNode)">${escapeHtml(r.prompt)}</div>
+        <textarea rows="8" onblur="endPromptEdit(this.parentNode)" oninput="routines[${i}].prompt = this.value">${escapeHtml(r.prompt)}</textarea>
       </div>
 
-      <label class="block-label">Schedule</label>
       <div class="cron-builder">
-        <div class="cron-row">
-          <label>When:</label>
-          <select onchange="setCronMode(${i}, this.value)">
-            <option value="daily" ${mode === "daily" ? "selected" : ""}>Every day</option>
-            <option value="weekdays" ${mode === "weekdays" ? "selected" : ""}>Weekdays (Mon–Fri)</option>
-            <option value="specific" ${mode === "specific" ? "selected" : ""}>Specific days</option>
-            <option value="custom" ${mode === "custom" ? "selected" : ""}>Custom (JSON)</option>
-          </select>
-        </div>
-        ${renderCronFields(i, mode, s.cron)}
-        <div class="cron-summary">${cronSummary(s.cron)}</div>
+        <label>Schedule</label>
+        <select onchange="setCronMode(${i}, this.value)">
+          <option value="daily" ${mode === "daily" ? "selected" : ""}>Every day</option>
+          <option value="weekdays" ${mode === "weekdays" ? "selected" : ""}>Weekdays (Mon–Fri)</option>
+          <option value="specific" ${mode === "specific" ? "selected" : ""}>Specific days</option>
+          <option value="custom" ${mode === "custom" ? "selected" : ""}>Custom (JSON)</option>
+        </select>
+        ${renderCronFields(i, mode, r.cron)}
+        <span class="cron-summary">${cronSummary(r.cron)}</span>
       </div>
 
-      <div class="toolbar"><button class="danger" onclick="removeSchedule(${i})">Delete schedule</button></div>
+      <div class="toolbar"><button class="danger" onclick="removeRoutine(${i})">Delete routine</button></div>
     `;
     wrap.appendChild(div);
   });
@@ -757,21 +762,16 @@ function renderSchedules() {
 function renderCronFields(i, mode, cron) {
   if (mode === "custom") {
     return `
-      <div class="cron-row">
-        <input value='${escapeHtml(JSON.stringify(cron || {}))}' oninput="updateCustomCron(${i}, this.value)" placeholder='{"hour": 8, "minute": 0}' />
-      </div>
-      <div class="hint">APScheduler cron kwargs. Each value can be a number, comma-list, range, or <code>*/N</code>.</div>
+      <input type="text" value='${escapeHtml(JSON.stringify(cron || {}))}' oninput="updateCustomCron(${i}, this.value)" placeholder='{"hour": 8, "minute": 0}' />
     `;
   }
   const time = cronTime(cron);
   const days = (cron && typeof cron.day_of_week === "string")
     ? cron.day_of_week.split(",").map(s => s.trim())
     : [];
-  const timeRow = `
-    <div class="cron-row">
-      <label>at</label>
-      <input type="time" value="${time}" onchange="updateCronTime(${i}, this.value)" />
-    </div>
+  const timeBits = `
+    <span class="inline-label">at</span>
+    <input type="time" value="${time}" onchange="updateCronTime(${i}, this.value)" />
   `;
   if (mode === "specific") {
     const checks = DAYS.map(d => `
@@ -779,11 +779,12 @@ function renderCronFields(i, mode, cron) {
       <label for="day-${i}-${d.v}">${d.label}</label>
     `).join("");
     return `
-      <div class="cron-row"><label>on</label><div class="day-toggles">${checks}</div></div>
-      ${timeRow}
+      <span class="inline-label">on</span>
+      <span class="day-toggles">${checks}</span>
+      ${timeBits}
     `;
   }
-  return timeRow;
+  return timeBits;
 }
 
 function cronSummary(cron) {
@@ -798,43 +799,59 @@ function cronSummary(cron) {
 }
 
 function setCronMode(i, mode) {
-  const cur = schedules[i].cron || {};
+  const cur = routines[i].cron || {};
   const time = cronTime(cur);
   const days = typeof cur.day_of_week === "string"
     ? cur.day_of_week.split(",").map(s => s.trim()).filter(d => /^[a-z]{3}$/.test(d))
     : [];
-  if (mode !== "custom") schedules[i].cron = buildCron(mode, time, days);
-  renderSchedules();
+  if (mode !== "custom") routines[i].cron = buildCron(mode, time, days);
+  renderRoutines();
 }
 
 function updateCronTime(i, time) {
-  const mode = detectMode(schedules[i].cron);
-  const days = typeof schedules[i].cron.day_of_week === "string"
-    ? schedules[i].cron.day_of_week.split(",").map(s => s.trim())
+  const mode = detectMode(routines[i].cron);
+  const days = typeof routines[i].cron.day_of_week === "string"
+    ? routines[i].cron.day_of_week.split(",").map(s => s.trim())
     : [];
-  schedules[i].cron = buildCron(mode === "custom" ? "daily" : mode, time, days);
-  renderSchedules();
+  routines[i].cron = buildCron(mode === "custom" ? "daily" : mode, time, days);
+  renderRoutines();
 }
 
 function updateCronDays(i) {
   const days = DAYS.map(d => d.v).filter(v => $(`day-${i}-${v}`).checked);
-  const time = cronTime(schedules[i].cron);
-  schedules[i].cron = buildCron("specific", time, days);
-  renderSchedules();
+  const time = cronTime(routines[i].cron);
+  routines[i].cron = buildCron("specific", time, days);
+  renderRoutines();
 }
 
 function updateCustomCron(i, raw) {
-  try { schedules[i].cron = JSON.parse(raw); } catch (e) { /* keep typing */ }
+  try { routines[i].cron = JSON.parse(raw); } catch (e) { /* keep typing */ }
 }
 
-function addSchedule() {
-  schedules.push({ id: "new_schedule", cron: { hour: 9, minute: 0 }, prompt: "" });
-  renderSchedules();
+function addRoutine() {
+  routines.push({ id: "", name: "New routine", cron: { hour: 9, minute: 0 }, prompt: "" });
+  renderRoutines();
 }
 
-function removeSchedule(i) {
-  schedules.splice(i, 1);
-  renderSchedules();
+function slugifyRoutineId(s) {
+  return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+function routinesWithDerivedIds(rs) {
+  const seen = new Set();
+  return rs.map(r => {
+    const base = slugifyRoutineId(r.name) || slugifyRoutineId(r.id) || "routine";
+    let id = base;
+    let n = 2;
+    while (seen.has(id)) id = `${base}_${n++}`;
+    seen.add(id);
+    return { ...r, id };
+  });
+}
+
+function removeRoutine(i) {
+  routines.splice(i, 1);
+  renderRoutines();
 }
 
 function setSpiritSub(name) {
@@ -843,8 +860,8 @@ function setSpiritSub(name) {
 }
 
 async function saveSpirit() {
-  current.system_prompt = $("spirit-prompt").value;
-  current.schedules = schedules;
+  current.mission = $("spirit-prompt").value;
+  current.routines = routinesWithDerivedIds(routines);
   await saveCurrent();
   toast("Saved");
 }
@@ -915,7 +932,7 @@ async function saveDialog() {
 async function dialogSend() {
   const text = $("dialog-send-text").value.trim();
   if (!text || !current) return;
-  await api("POST", `/api/golems/${encodeURIComponent(current.name)}/dialog/send`, { text });
+  await api("POST", `/api/golems/${encodeURIComponent(current.id)}/dialog/send`, { text });
   $("dialog-send-text").value = "";
   toast("Sent");
   await loadDialogMessages();
@@ -926,7 +943,7 @@ async function loadDialogMessages() {
   const wrap = $("dialog-messages");
   let entries;
   try {
-    entries = await api("GET", `/api/golems/${encodeURIComponent(current.name)}/memory/conversation`);
+    entries = await api("GET", `/api/golems/${encodeURIComponent(current.id)}/memory/conversation`);
   } catch (e) {
     wrap.innerHTML = `<div class="meta">No conversation history yet.</div>`;
     return;
@@ -954,7 +971,7 @@ let currentTopic = null;
 
 async function loadTopics() {
   if (!current) return;
-  const topics = await api("GET", `/api/golems/${encodeURIComponent(current.name)}/memory/topics`);
+  const topics = await api("GET", `/api/golems/${encodeURIComponent(current.id)}/memory/topics`);
   const wrap = $("topic-list");
   wrap.innerHTML = "";
   topics.forEach(t => {
@@ -966,6 +983,8 @@ async function loadTopics() {
   });
   if (currentTopic && topics.includes(currentTopic)) {
     loadEntries();
+  } else if (topics.length > 0) {
+    selectTopic(topics[0]);
   } else {
     currentTopic = null;
     $("entries").innerHTML = "";
@@ -980,7 +999,7 @@ async function selectTopic(t) {
 
 async function loadEntries() {
   if (!current || !currentTopic) return;
-  const entries = await api("GET", `/api/golems/${encodeURIComponent(current.name)}/memory/${encodeURIComponent(currentTopic)}`);
+  const entries = await api("GET", `/api/golems/${encodeURIComponent(current.id)}/memory/${encodeURIComponent(currentTopic)}`);
   entries.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
   const isConvo = currentTopic === "conversation";
   const hideId = isConvo;

@@ -23,7 +23,7 @@ from golem.memory.memory import Memory
 from golem.memory.tinydb_store import TinyDbMemory
 from golem.skills import build_skills
 from golem.skills.skill import Skill
-from golem.spirit.spirit import Schedule, Spirit
+from golem.spirit.spirit import Routine, Spirit
 
 if TYPE_CHECKING:
     from forge.store import ForgeStore, GolemSpec
@@ -56,6 +56,10 @@ class Golem:
         self._history_window = 40
 
     @property
+    def id(self) -> str:
+        return self._spec.id
+
+    @property
     def name(self) -> str:
         return self._spec.name
 
@@ -69,7 +73,7 @@ class Golem:
         if self._awake:
             return
         self._build_components()
-        self._reconcile_schedules()
+        self._reconcile_routines()
         await self._dialog.run(self.handle_user_message)
         self._awake = True
 
@@ -81,7 +85,7 @@ class Golem:
                 await self._dialog.stop()
             except Exception as exc:  # noqa: BLE001
                 print(f"[golem:{self.name}] error stopping dialog: {exc}", file=sys.stderr)
-        self._remove_schedule_jobs()
+        self._remove_routine_jobs()
         self._brain = None
         self._memory = None
         self._dialog = None
@@ -95,7 +99,7 @@ class Golem:
         was_awake = self._awake
         if was_awake:
             await self.sleep()
-        self._spec = self._store.get_golem(self.name)
+        self._spec = self._store.get_golem(self.id)
         if was_awake:
             await self.awake()
 
@@ -109,8 +113,8 @@ class Golem:
             api_key=spec.brain.api_key,
             base_url=spec.brain.base_url,
         ))
-        self._memory = TinyDbMemory(f"data/{spec.name}/memory.json")
-        self._spirit = Spirit(self._store, spec.name)
+        self._memory = TinyDbMemory(f"data/{spec.id}/memory.json")
+        self._spirit = Spirit(self._store, spec.id)
         self._skills = build_skills(self._memory, list(spec.skills))
         self._dialog = self._build_dialog()
 
@@ -123,43 +127,43 @@ class Golem:
             raise ValueError("telegram dialog needs both token and chat_id")
         return TelegramDialog(tg.token, tg.chat_id)
 
-    def _remove_schedule_jobs(self) -> None:
-        ns = f"{self.name}:"
+    def _remove_routine_jobs(self) -> None:
+        ns = f"{self.id}:"
         for job in list(self._scheduler.get_jobs()):
             if job.id.startswith(ns):
                 self._scheduler.remove_job(job.id)
 
-    # ---- Schedules ----
+    # ---- Routines ----
 
-    def reconcile_schedules(self) -> bool:
-        """Pick up Spirit edits — re-reads `spirit.schedules` and updates jobs."""
+    def reconcile_routines(self) -> bool:
+        """Pick up Spirit edits — re-reads `spirit.routines` and updates jobs."""
         if not self._awake:
             return False
-        return self._reconcile_schedules()
+        return self._reconcile_routines()
 
-    def _reconcile_schedules(self) -> bool:
+    def _reconcile_routines(self) -> bool:
         assert self._spirit is not None
         version = self._spirit.version
         if version == self._last_reconciled_version:
             return False
         self._last_reconciled_version = version
 
-        ns = f"{self.name}:"
-        desired: dict[str, Schedule] = {ns + s.id: s for s in self._spirit.schedules}
+        ns = f"{self.id}:"
+        desired: dict[str, Routine] = {ns + r.id: r for r in self._spirit.routines}
         existing_ids = {j.id for j in self._scheduler.get_jobs() if j.id.startswith(ns)}
 
         for jid in existing_ids - desired.keys():
             self._scheduler.remove_job(jid)
 
-        for jid, sched in desired.items():
+        for jid, routine in desired.items():
             if jid in existing_ids:
                 self._scheduler.remove_job(jid)
             self._scheduler.add_job(
-                self.fire_schedule,
+                self.fire_routine,
                 "cron",
-                kwargs={"schedule": sched},
+                kwargs={"routine": routine},
                 id=jid,
-                **sched.cron,
+                **routine.cron,
             )
         return True
 
@@ -172,33 +176,33 @@ class Golem:
         self._memory.add(_CONVO_TOPIC, {"role": "assistant", "content": reply})
         return reply
 
-    async def fire_schedule(self, schedule: Schedule) -> None:
+    async def fire_routine(self, routine: Routine) -> None:
         assert self._memory is not None and self._dialog is not None
-        reply = await self._think(user_text=schedule.prompt, schedule_id=schedule.id)
+        reply = await self._think(user_text=routine.prompt, routine_id=routine.id)
         self._memory.add(_CONVO_TOPIC, {
-            "role": "assistant", "content": reply, "schedule": schedule.id,
+            "role": "assistant", "content": reply, "routine": routine.id,
         })
         if reply:
             await self._dialog.send(reply)
 
     # ---- Core loop ----
 
-    async def _think(self, user_text: str, schedule_id: str | None = None) -> str:
+    async def _think(self, user_text: str, routine_id: str | None = None) -> str:
         assert self._brain is not None and self._spirit is not None
         tools, dispatch = self._collect_tools()
 
         now = datetime.now().astimezone()
         system = (
-            f"{self._spirit.system_prompt}\n\n"
+            f"{self._spirit.mission}\n\n"
             f"Today: {now.date().isoformat()} ({now.strftime('%A')}). "
             f"Current time: {now.strftime('%H:%M %Z')}."
         )
         messages: list[Message] = [Message(role="system", content=system)]
         messages.extend(self._recent_history())
-        if schedule_id is not None:
+        if routine_id is not None:
             messages.append(Message(
                 role="user",
-                content=f"[scheduled:{schedule_id}] {user_text}",
+                content=f"[routine:{routine_id}] {user_text}",
             ))
 
         for _ in range(_MAX_TOOL_ITERATIONS):
