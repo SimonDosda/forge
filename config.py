@@ -1,31 +1,25 @@
+"""Loads secrets and runtime selectors from .env."""
 import os
 from dataclasses import dataclass
 
 from dotenv import load_dotenv
 
 
-REQUIRED_KEYS = (
-    "TELEGRAM_TOKEN",
-    "TELEGRAM_CHAT_ID",
-    "MISTRAL_API_KEY",
-    "NOTION_TOKEN",
-    "NOTION_DATABASE_ID",
-    "LATITUDE",
-    "LONGITUDE",
-    "BRIEFING_HOUR",
-)
-
-
 @dataclass(frozen=True)
 class Settings:
+    # Brain
+    brain_provider: str
+    brain_model: str
+    brain_api_key: str
+    brain_base_url: str
+
+    # Voice (telegram for now)
     telegram_token: str
     telegram_chat_id: int
-    mistral_api_key: str
-    notion_token: str
-    notion_database_id: str
-    latitude: float
-    longitude: float
-    briefing_hour: int
+
+    # Filesystem roots
+    memory_root: str
+    spirit_path: str
 
 
 class MissingEnvError(RuntimeError):
@@ -34,21 +28,24 @@ class MissingEnvError(RuntimeError):
         self.missing = missing
 
 
+_REQUIRED = ("BRAIN_PROVIDER", "BRAIN_MODEL", "TELEGRAM_TOKEN", "TELEGRAM_CHAT_ID")
+
+
 def load(env_path: str | None = ".env") -> Settings:
     if env_path:
         load_dotenv(env_path, override=False)
 
-    missing = [k for k in REQUIRED_KEYS if not os.getenv(k)]
+    missing = [k for k in _REQUIRED if not os.getenv(k)]
     if missing:
         raise MissingEnvError(missing)
 
     return Settings(
+        brain_provider=os.environ["BRAIN_PROVIDER"],
+        brain_model=os.environ["BRAIN_MODEL"],
+        brain_api_key=os.getenv("BRAIN_API_KEY", ""),
+        brain_base_url=os.getenv("BRAIN_BASE_URL", ""),
         telegram_token=os.environ["TELEGRAM_TOKEN"],
         telegram_chat_id=int(os.environ["TELEGRAM_CHAT_ID"]),
-        mistral_api_key=os.environ["MISTRAL_API_KEY"],
-        notion_token=os.environ["NOTION_TOKEN"],
-        notion_database_id=os.environ["NOTION_DATABASE_ID"],
-        latitude=float(os.environ["LATITUDE"]),
-        longitude=float(os.environ["LONGITUDE"]),
-        briefing_hour=int(os.environ["BRIEFING_HOUR"]),
+        memory_root=os.getenv("MEMORY_ROOT", "data/memory"),
+        spirit_path=os.getenv("SPIRIT_PATH", "data/spirit.json"),
     )

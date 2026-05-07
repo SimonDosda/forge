@@ -35,3 +35,7 @@ htmlcov/
 
 # Logs
 *.log
+
+# Runtime data (memory entries are local-only; spirit.json ships with the repo)
+data/*
+!data/spirit.json

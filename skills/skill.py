@@ -1,18 +1,13 @@
-from dataclasses import dataclass
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
 
-
-@dataclass(frozen=True)
-class SkillAction:
-    """One callable capability exposed by a skill (analogous to an MCP tool)."""
-
-    name: str
-    description: str
-    parameters: dict[str, Any]  # JSON Schema describing handler args
-    handler: Callable[..., Any]
+from core import ToolSpec
 
 
 class Skill(Protocol):
+    """MCP-shaped capability: declares tools and handles calls."""
     name: str
-    description: str
-    actions: list[SkillAction]
+
+    @property
+    def tools(self) -> list[ToolSpec]: ...
+
+    def call(self, name: str, arguments: dict[str, Any]) -> Any: ...

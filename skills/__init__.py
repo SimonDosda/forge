@@ -1,4 +1,5 @@
+from skills.skill import Skill
+from skills.memory_skill import MemorySkill
 from skills.open_meteo import OpenMeteo
-from skills.skill import Skill, SkillAction
 
-__all__ = ["OpenMeteo", "Skill", "SkillAction"]
+__all__ = ["Skill", "MemorySkill", "OpenMeteo"]
