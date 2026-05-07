@@ -266,6 +266,10 @@ def build_app(env_path: str = ".env") -> FastAPI:
     def index() -> FileResponse:
         return FileResponse(_STATIC / "index.html")
 
+    @app.get("/golem/{name}")
+    def golem_page(name: str) -> FileResponse:
+        return FileResponse(_STATIC / "index.html")
+
     return app
 
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Golem — Forge</title>
+<title>Forge</title>
 <style>
   :root {
     --bg: #fafafa;
@@ -162,14 +162,45 @@
   .state-badge.running { background: #dff5e6; color: var(--accent); }
   .state-badge.running::before { content: "● "; }
   .state-badge.sleeping::before { content: "○ "; }
+  .golem-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+  .golem-list a {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--fg);
+  }
+  .golem-list a:hover { border-color: var(--accent); }
+  .golem-item-name { font-size: 16px; font-weight: 600; flex: 1; }
+  .golem-item-meta { font-size: 13px; color: var(--muted); }
+  .list-toolbar { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+  a.back-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    text-decoration: none; color: var(--muted); font-size: 14px;
+    padding: 6px 0;
+  }
+  a.back-link:hover { color: var(--accent); }
 </style>
 </head>
 <body>
-<h1>Golem — Forge</h1>
+<h1 id="page-title">Forge</h1>
 
+<div id="view-list">
+  <div class="list-toolbar">
+    <button class="primary" onclick="newGolemFlow()">+ New golem</button>
+  </div>
+  <div id="empty-state" class="empty-state" style="display:none">
+    <h2>No golems yet</h2>
+    <div>Click <strong>+ New golem</strong> to forge your first golem.</div>
+  </div>
+  <ul id="golem-list" class="golem-list"></ul>
+</div>
+
+<div id="view-detail" style="display:none">
 <header class="golem-bar">
-  <select id="golem-select" onchange="onGolemChange()"></select>
-  <button class="ghost" onclick="newGolemFlow()">+ New</button>
+  <a href="/" class="back-link" onclick="goToList(event)">← Forge</a>
   <span id="state-badge" class="state-badge"></span>
   <span class="grow"></span>
   <label class="toggle"><input type="checkbox" id="golem-enabled" onchange="toggleEnabled()" /> autowake</label>
@@ -177,11 +208,6 @@
   <button id="sleep-btn" class="ghost" onclick="sleepCurrent()">Sleep</button>
   <button class="danger" onclick="deleteCurrentGolem()">Delete</button>
 </header>
-
-<div id="empty-state" class="empty-state" style="display:none">
-  <h2>No golems yet</h2>
-  <div>Click <strong>+ New</strong> to forge your first golem.</div>
-</div>
 
 <div id="golem-editor">
 <nav>
@@ -290,6 +316,7 @@
   <div id="entries"></div>
 </section>
 </div>
+</div>
 
 <div id="toast" class="toast"></div>
 
@@ -298,6 +325,7 @@ const $ = (id) => document.getElementById(id);
 
 let golems = [];        // [{name, enabled, brain, dialog_kind, skill_count}, ...]
 let current = null;     // full GolemSpec object for the selected golem
+let currentUrlName = null; // the name segment in the URL (what we PUT to)
 let registry = { available: [], describe: [] };
 let schedules = [];     // current.schedules, kept in sync
 
@@ -348,39 +376,107 @@ function relativeTime(iso) {
   return "";
 }
 
-// --- Golem list / selector ---
+// --- Routing ---
+
+function currentRoute() {
+  const m = window.location.pathname.match(/^\/golem\/(.+)$/);
+  if (m) return { view: "detail", name: decodeURIComponent(m[1]) };
+  return { view: "list" };
+}
+
+function navigate(path, replace = false) {
+  if (replace) history.replaceState({}, "", path);
+  else history.pushState({}, "", path);
+  applyRoute();
+}
+
+function goToList(e) {
+  if (e) e.preventDefault();
+  navigate("/");
+}
+
+function openGolem(e, name) {
+  if (e) e.preventDefault();
+  navigate(`/golem/${encodeURIComponent(name)}`);
+}
+
+async function applyRoute() {
+  const route = currentRoute();
+  if (route.view === "list") {
+    showListView();
+    await loadGolemList();
+  } else {
+    showDetailView();
+    try {
+      await loadCurrent(route.name);
+    } catch (e) {
+      navigate("/", true);
+    }
+  }
+}
+
+function showListView() {
+  current = null;
+  currentUrlName = null;
+  $("page-title").textContent = "Forge";
+  document.title = "Forge";
+  $("view-list").style.display = "";
+  $("view-detail").style.display = "none";
+}
+
+function showDetailView() {
+  $("view-list").style.display = "none";
+  $("view-detail").style.display = "";
+}
+
+// --- Golem list ---
 
 async function loadRegistry() {
   registry = await api("GET", "/api/skills");
 }
 
-async function loadGolems(selectName) {
+async function loadGolemList() {
   golems = await api("GET", "/api/golems");
-  const sel = $("golem-select");
-  sel.innerHTML = golems.map(g => {
-    const dot = g.running ? "● " : "○ ";
-    return `<option value="${escapeHtml(g.name)}">${dot}${escapeHtml(g.name)}</option>`;
-  }).join("");
+  const wrap = $("golem-list");
   if (golems.length === 0) {
-    current = null;
     $("empty-state").style.display = "";
-    $("golem-editor").style.display = "none";
+    wrap.innerHTML = "";
     return;
   }
   $("empty-state").style.display = "none";
-  $("golem-editor").style.display = "";
-  const target = selectName && golems.some(g => g.name === selectName)
-    ? selectName
-    : (current && golems.some(g => g.name === current.name) ? current.name : golems[0].name);
-  sel.value = target;
-  await loadCurrent(target);
+  wrap.innerHTML = golems.map(g => {
+    const stateClass = g.running ? "running" : "sleeping";
+    const stateText = g.running ? "running" : "sleeping";
+    const brain = [g.brain.provider, g.brain.model].filter(Boolean).join(" · ");
+    const skills = `${g.skill_count} skill${g.skill_count === 1 ? "" : "s"}`;
+    const meta = [brain, skills].filter(Boolean).join(" · ");
+    const href = `/golem/${encodeURIComponent(g.name)}`;
+    return `
+      <li>
+        <a href="${href}" class="golem-link" data-name="${escapeHtml(g.name)}">
+          <span class="state-badge ${stateClass}">${stateText}</span>
+          <span class="golem-item-name">${escapeHtml(g.name)}</span>
+          <span class="golem-item-meta">${escapeHtml(meta)}</span>
+        </a>
+      </li>
+    `;
+  }).join("");
+  wrap.querySelectorAll("a.golem-link").forEach(a => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      navigate(`/golem/${encodeURIComponent(a.dataset.name)}`);
+    });
+  });
 }
 
 async function loadCurrent(name) {
+  currentUrlName = name;
   current = await api("GET", `/api/golems/${encodeURIComponent(name)}`);
   schedules = current.schedules || [];
   $("golem-enabled").checked = !!current.enabled;
   $("golem-name").value = current.name;
+  $("page-title").textContent = `Golem ${current.name}`;
+  document.title = `Golem ${current.name}`;
   renderRunningState();
   // Refresh whichever tab is active
   const active = document.querySelector("nav button.active");
@@ -399,21 +495,17 @@ function renderRunningState() {
 async function wakeCurrent() {
   if (!current) return;
   try {
-    await api("POST", `/api/golems/${encodeURIComponent(current.name)}/awake`);
+    await api("POST", `/api/golems/${encodeURIComponent(currentUrlName)}/awake`);
   } catch (e) { return; }
-  await loadGolems(current.name);
+  await loadCurrent(currentUrlName);
   toast("Awake");
 }
 
 async function sleepCurrent() {
   if (!current) return;
-  await api("POST", `/api/golems/${encodeURIComponent(current.name)}/sleep`);
-  await loadGolems(current.name);
+  await api("POST", `/api/golems/${encodeURIComponent(currentUrlName)}/sleep`);
+  await loadCurrent(currentUrlName);
   toast("Sleeping");
-}
-
-async function onGolemChange() {
-  await loadCurrent($("golem-select").value);
 }
 
 async function newGolemFlow() {
@@ -422,17 +514,16 @@ async function newGolemFlow() {
   try {
     await api("POST", "/api/golems", emptyGolem(name));
   } catch (e) { return; }
-  await loadGolems(name);
+  navigate(`/golem/${encodeURIComponent(name)}`);
   toast("Created — fill in brain + dialog and enable.");
 }
 
 async function deleteCurrentGolem() {
   if (!current) return;
   if (!confirm(`Delete golem "${current.name}"? The memory file at data/${current.name}/memory.json will be left on disk.`)) return;
-  await api("DELETE", `/api/golems/${encodeURIComponent(current.name)}`);
-  current = null;
-  await loadGolems();
+  await api("DELETE", `/api/golems/${encodeURIComponent(currentUrlName)}`);
   toast("Deleted");
+  navigate("/");
 }
 
 async function toggleEnabled() {
@@ -461,9 +552,9 @@ function emptyGolem(name) {
   };
 }
 
-async function saveCurrent(switchTo) {
+async function saveCurrent() {
   // Send the full spec back. The server replaces it wholesale.
-  const url = `/api/golems/${encodeURIComponent($("golem-select").value)}`;
+  const url = `/api/golems/${encodeURIComponent(currentUrlName)}`;
   const payload = {
     name: current.name,
     enabled: current.enabled,
@@ -474,7 +565,11 @@ async function saveCurrent(switchTo) {
     skills: current.skills,
   };
   await api("PUT", url, payload);
-  await loadGolems(switchTo || current.name);
+  const newName = current.name;
+  if (newName !== currentUrlName) {
+    history.replaceState({}, "", `/golem/${encodeURIComponent(newName)}`);
+  }
+  await loadCurrent(newName);
 }
 
 // --- Tabs ---
@@ -953,9 +1048,11 @@ function renderChatBubble(data) {
 
 // --- Init ---
 
+window.addEventListener("popstate", applyRoute);
+
 (async () => {
   await loadRegistry();
-  await loadGolems();
+  await applyRoute();
 })();
 </script>
 </body>
