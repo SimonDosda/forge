@@ -21,6 +21,7 @@ Modular personal assistant. Five small components, swappable backends.
 - **Skills** — MCP-shaped capabilities. Each skill exposes `tools: list[ToolSpec]` and a `call(name, arguments)` handler. Memory itself is wrapped as a skill so the Brain can read/write it.
 - **Spirit** — Static instructions (system prompt) and scheduled actions, persisted to `data/spirit.json`. Editable at runtime.
 - **Voice** — I/O channel. `TelegramVoice` for now; the protocol covers any push/pull transport (email, WhatsApp, ...).
+- **View** — Browser-based config UI. Read/write `.env`, edit Spirit (prompt + schedules), browse and edit Memory entries.
 
 ## Layout
 
@@ -34,6 +35,7 @@ memory/             # protocol + json_store
 skills/             # protocol + memory_skill + open_meteo
 spirit/             # protocol + JSON-backed config
 voice/              # protocol + telegram
+view/               # browser config UI (FastAPI + static HTML)
 data/               # runtime state (gitignored)
 ```
 
@@ -42,7 +44,8 @@ data/               # runtime state (gitignored)
 ```bash
 uv sync
 cp .env.example .env   # then edit
-uv run python awake.py
+uv run python awake.py          # run the bot
+uv run python -m view.server    # config UI on http://127.0.0.1:8765
 ```
 
 ## Adding a new skill

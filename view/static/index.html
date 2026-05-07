@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Garden Bot — Config</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #222;
+    --muted: #777;
+    --border: #ddd;
+    --accent: #2d6a4f;
+    --danger: #b03a2e;
+    --code: #f0f0f0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg); color: var(--fg);
+    max-width: 920px; margin-inline: auto;
+  }
+  h1 { margin: 0 0 24px; font-size: 22px; }
+  nav { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+  nav button {
+    background: none; border: none; padding: 10px 16px;
+    cursor: pointer; font-size: 14px; color: var(--muted);
+    border-bottom: 2px solid transparent;
+  }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  section { display: none; }
+  section.active { display: block; }
+  .row { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
+  .row label { width: 160px; padding-top: 8px; font-size: 13px; color: var(--muted); }
+  .row .field { flex: 1; }
+  input, textarea, select {
+    width: 100%; padding: 8px 10px; font-size: 14px;
+    border: 1px solid var(--border); border-radius: 4px;
+    font-family: inherit; background: white;
+  }
+  textarea { min-height: 80px; resize: vertical; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  button.primary {
+    background: var(--accent); color: white; border: none;
+    padding: 8px 18px; border-radius: 4px; cursor: pointer; font-size: 14px;
+  }
+  button.danger { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  button.ghost { background: white; border: 1px solid var(--border); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  .schedule, .entry {
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 14px; margin-bottom: 12px; background: white;
+  }
+  .schedule h3, .entry h3 { margin: 0 0 10px; font-size: 14px; }
+  .entry-header { display: flex; gap: 8px; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap; }
+  .entry-header .when { font-size: 13px; font-weight: 600; color: var(--accent); }
+  .entry-header .when-rel { font-size: 12px; color: var(--muted); }
+  .entry-header .when-edited { font-size: 12px; color: var(--muted); font-style: italic; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .hint code { background: var(--code); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+  .hint ul { margin: 6px 0 6px 18px; padding: 0; }
+  .hint li { margin-bottom: 2px; }
+  .toolbar { display: flex; gap: 8px; margin-top: 16px; }
+  .topic-list { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .topic-list button { background: white; border: 1px solid var(--border); padding: 4px 10px; border-radius: 14px; cursor: pointer; font-size: 13px; }
+  .topic-list button.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .meta { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .kv { font-size: 14px; }
+  .kv-table { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; }
+  .kv-table dt { font-weight: 600; color: var(--muted); font-size: 13px; align-self: start; padding-top: 1px; }
+  .kv-table dd { margin: 0; word-break: break-word; }
+  .kv-list { margin: 4px 0; padding-left: 18px; }
+  .kv-list > li { margin-bottom: 4px; }
+  .kv-table dl.kv-table { margin-top: 4px; padding: 4px 8px; border-left: 2px solid var(--border); }
+  .v-str { color: var(--fg); white-space: pre-wrap; }
+  .v-num { color: #1565c0; font-variant-numeric: tabular-nums; }
+  .v-bool { color: #6a1b9a; font-weight: 500; }
+  .v-null, .v-empty { color: var(--muted); font-style: italic; }
+  .entry.msg-user { background: #e8f5e9; border-color: #c8e6c9; margin-left: 48px; }
+  .entry.msg-assistant { margin-right: 48px; }
+  .entry.msg-tool { background: #fff8e1; border-color: #ffe082; margin-right: 48px; font-size: 13px; }
+  .msg-role { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; letter-spacing: 0.04em; }
+  .msg-content { white-space: pre-wrap; line-height: 1.45; }
+  .msg-extras { font-size: 11px; color: var(--muted); margin-top: 6px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--accent); color: white; padding: 10px 16px; border-radius: 4px; opacity: 0; transition: opacity .2s; }
+  .toast.show { opacity: 1; }
+  .toast.error { background: var(--danger); }
+  pre.json { background: var(--code); padding: 8px; border-radius: 4px; font-size: 12px; overflow-x: auto; }
+</style>
+</head>
+<body>
+<h1>Garden Bot — Config</h1>
+
+<nav>
+  <button data-tab="env" class="active">Environment</button>
+  <button data-tab="spirit">Spirit</button>
+  <button data-tab="memory">Memory</button>
+</nav>
+
+<section id="tab-env" class="active">
+  <div id="env-fields"></div>
+  <div class="toolbar">
+    <button class="primary" onclick="saveEnv()">Save</button>
+    <span class="meta">Restart the bot to pick up changes.</span>
+  </div>
+</section>
+
+<section id="tab-spirit">
+  <div class="row">
+    <label>System prompt</label>
+    <div class="field"><textarea id="spirit-prompt" rows="8"></textarea></div>
+  </div>
+  <h3>Schedules</h3>
+  <div id="schedules"></div>
+  <div class="toolbar">
+    <button class="ghost" onclick="addSchedule()">+ Schedule</button>
+    <button class="primary" onclick="saveSpirit()">Save</button>
+  </div>
+</section>
+
+<section id="tab-memory">
+  <div class="topic-list" id="topic-list"></div>
+  <div id="entries"></div>
+  <div class="toolbar">
+    <input id="new-topic" placeholder="topic name" style="max-width: 220px;" />
+    <button class="ghost" onclick="addTopic()">+ New topic</button>
+    <button class="ghost" onclick="addEntry()" id="add-entry-btn" style="display:none">+ Entry to current topic</button>
+  </div>
+</section>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+// --- Tabs ---
+document.querySelectorAll("nav button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("nav button").forEach(x => x.classList.remove("active"));
+    document.querySelectorAll("section").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    $("tab-" + b.dataset.tab).classList.add("active");
+    if (b.dataset.tab === "memory") loadTopics();
+  };
+});
+
+function toast(msg, error = false) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (error ? " error" : "");
+  setTimeout(() => t.className = "toast", 2000);
+}
+
+async function api(method, url, body) {
+  const opts = { method, headers: { "Content-Type": "application/json" } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  if (!r.ok) {
+    const detail = await r.text();
+    toast(`${r.status}: ${detail}`, true);
+    throw new Error(detail);
+  }
+  return r.json();
+}
+
+// --- Env ---
+async function loadEnv() {
+  const data = await api("GET", "/api/env");
+  const wrap = $("env-fields");
+  wrap.innerHTML = "";
+  for (const k of data.keys) {
+    const isSecret = data.secret_keys.includes(k);
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <label>${k}</label>
+      <div class="field"><input id="env-${k}" type="${isSecret ? "password" : "text"}" /></div>
+    `;
+    wrap.appendChild(row);
+    $("env-" + k).value = data.values[k] || "";
+  }
+}
+
+async function saveEnv() {
+  const data = await api("GET", "/api/env");
+  const values = {};
+  for (const k of data.keys) values[k] = $("env-" + k).value;
+  await api("PUT", "/api/env", { values });
+  toast("Saved");
+}
+
+// --- Spirit ---
+let schedules = [];
+
+async function loadSpirit() {
+  const s = await api("GET", "/api/spirit");
+  $("spirit-prompt").value = s.system_prompt;
+  schedules = s.schedules || [];
+  renderSchedules();
+}
+
+function renderSchedules() {
+  const wrap = $("schedules");
+  wrap.innerHTML = "";
+  schedules.forEach((s, i) => {
+    const div = document.createElement("div");
+    div.className = "schedule";
+    div.innerHTML = `
+      <div class="row"><label>id</label><div class="field"><input value="${escapeHtml(s.id)}" oninput="schedules[${i}].id = this.value" /></div></div>
+      <div class="row"><label>prompt</label><div class="field"><textarea oninput="schedules[${i}].prompt = this.value">${escapeHtml(s.prompt)}</textarea></div></div>
+      <div class="row"><label>cron (JSON)</label><div class="field">
+        <input value='${escapeHtml(JSON.stringify(s.cron))}' oninput="updateCron(${i}, this.value)" />
+        <div class="hint">APScheduler cron kwargs as JSON. Each field is a number, comma-list, range, or <code>*/N</code>. Common keys: <code>hour</code>, <code>minute</code>, <code>day_of_week</code> (0=mon … 6=sun, or <code>mon-fri</code>), <code>day</code>, <code>month</code>. Examples:
+          <ul>
+            <li><code>{"hour": 8, "minute": 0}</code> — every day at 08:00</li>
+            <li><code>{"hour": "9,18", "minute": 0}</code> — 09:00 and 18:00 daily</li>
+            <li><code>{"day_of_week": "mon-fri", "hour": 7, "minute": 30}</code> — weekdays at 07:30</li>
+            <li><code>{"minute": "*/15"}</code> — every 15 minutes</li>
+            <li><code>{"day_of_week": "sat,sun", "hour": 10}</code> — weekends at 10:00</li>
+          </ul>
+          Omitted fields default to <code>*</code> (any). Times use the server's local timezone.
+        </div>
+      </div></div>
+      <button class="danger" onclick="removeSchedule(${i})">Delete</button>
+    `;
+    wrap.appendChild(div);
+  });
+}
+
+function updateCron(i, raw) {
+  try { schedules[i].cron = JSON.parse(raw); } catch (e) { /* keep typing */ }
+}
+
+function addSchedule() {
+  schedules.push({ id: "new_schedule", cron: { hour: 9, minute: 0 }, prompt: "" });
+  renderSchedules();
+}
+
+function removeSchedule(i) {
+  schedules.splice(i, 1);
+  renderSchedules();
+}
+
+async function saveSpirit() {
+  await api("PUT", "/api/spirit", {
+    system_prompt: $("spirit-prompt").value,
+    schedules,
+  });
+  toast("Saved");
+}
+
+// --- Memory ---
+let currentTopic = null;
+
+async function loadTopics() {
+  const topics = await api("GET", "/api/memory/topics");
+  const wrap = $("topic-list");
+  wrap.innerHTML = "";
+  topics.forEach(t => {
+    const b = document.createElement("button");
+    b.textContent = t;
+    if (t === currentTopic) b.classList.add("active");
+    b.onclick = () => selectTopic(t);
+    wrap.appendChild(b);
+  });
+  if (currentTopic && topics.includes(currentTopic)) {
+    loadEntries();
+  } else {
+    currentTopic = null;
+    $("entries").innerHTML = "";
+    $("add-entry-btn").style.display = "none";
+  }
+}
+
+async function selectTopic(t) {
+  currentTopic = t;
+  $("add-entry-btn").style.display = "inline-block";
+  await loadTopics();
+  await loadEntries();
+}
+
+let editingId = null;
+
+async function loadEntries() {
+  const entries = await api("GET", `/api/memory/${currentTopic}`);
+  entries.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+  const hideId = currentTopic === "conversation";
+  const isConvo = currentTopic === "conversation";
+  const wrap = $("entries");
+  wrap.innerHTML = "";
+  entries.forEach(e => {
+    const div = document.createElement("div");
+    const isEditing = editingId === e.id;
+    let cls = "entry";
+    if (isConvo && !isEditing) {
+      const role = (e.data && e.data.role) || "assistant";
+      cls += " msg-" + (["user", "assistant", "tool"].includes(role) ? role : "assistant");
+    }
+    div.className = cls;
+    const edited = e.updated_at && e.updated_at !== e.created_at;
+
+    let body;
+    if (isEditing) {
+      const dataStr = JSON.stringify(e.data, null, 2);
+      body = `
+        <div class="row"><label>data (JSON)</label><div class="field"><textarea rows="6" id="entry-${e.id}">${escapeHtml(dataStr)}</textarea></div></div>
+        <div class="toolbar">
+          <button class="primary" onclick="saveEntry('${e.id}')">Save</button>
+          <button class="ghost" onclick="cancelEdit()">Cancel</button>
+        </div>
+      `;
+    } else {
+      const view = isConvo ? renderChatBubble(e.data) : `<div class="kv">${renderKV(e.data)}</div>`;
+      body = `
+        ${view}
+        <div class="toolbar">
+          <button class="ghost" onclick="editEntry('${e.id}')">Edit</button>
+          <button class="danger" onclick="deleteEntry('${e.id}')">Delete</button>
+        </div>
+      `;
+    }
+
+    div.innerHTML = `
+      <div class="entry-header">
+        <span class="when">${formatTime(e.created_at)}</span>
+        <span class="when-rel">${relativeTime(e.created_at)}</span>
+        ${edited ? `<span class="when-edited" title="${escapeHtml(formatTime(e.updated_at))}">· edited ${relativeTime(e.updated_at)}</span>` : ""}
+      </div>
+      ${body}
+      ${hideId ? "" : `<div class="meta">id: ${e.id}</div>`}
+    `;
+    wrap.appendChild(div);
+  });
+}
+
+function renderKV(value) {
+  if (value === null || value === undefined) return `<span class="v-null">${value === null ? "null" : "—"}</span>`;
+  if (typeof value === "boolean") return `<span class="v-bool">${value}</span>`;
+  if (typeof value === "number") return `<span class="v-num">${value}</span>`;
+  if (typeof value === "string") return `<span class="v-str">${escapeHtml(value)}</span>`;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return `<span class="v-empty">(empty list)</span>`;
+    const allPrim = value.every(v => v === null || typeof v !== "object");
+    if (allPrim) return value.map(renderKV).join(", ");
+    return `<ul class="kv-list">${value.map(v => `<li>${renderKV(v)}</li>`).join("")}</ul>`;
+  }
+  const keys = Object.keys(value);
+  if (keys.length === 0) return `<span class="v-empty">(empty)</span>`;
+  return `<dl class="kv-table">${keys.map(k => `
+    <dt>${escapeHtml(k)}</dt><dd>${renderKV(value[k])}</dd>
+  `).join("")}</dl>`;
+}
+
+function renderChatBubble(data) {
+  const role = (data && data.role) || "?";
+  const content = (data && data.content) || "";
+  const extras = data
+    ? Object.keys(data).filter(k => k !== "role" && k !== "content")
+    : [];
+  const extrasHtml = extras.length
+    ? `<div class="msg-extras">${extras.map(k => `<span><strong>${escapeHtml(k)}:</strong> ${escapeHtml(typeof data[k] === "string" ? data[k] : JSON.stringify(data[k]))}</span>`).join("")}</div>`
+    : "";
+  return `
+    <div class="msg-role">${escapeHtml(role)}</div>
+    <div class="msg-content">${escapeHtml(content) || `<span class="v-empty">(no content)</span>`}</div>
+    ${extrasHtml}
+  `;
+}
+
+function formatTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.toLocaleString(undefined, {
+    year: "numeric", month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function relativeTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  const diff = Math.round((Date.now() - d.getTime()) / 1000);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return "";
+}
+
+function editEntry(id) {
+  editingId = id;
+  loadEntries();
+}
+
+function cancelEdit() {
+  editingId = null;
+  loadEntries();
+}
+
+async function saveEntry(id) {
+  let data;
+  try { data = JSON.parse($("entry-" + id).value); }
+  catch (e) { toast("Invalid JSON", true); return; }
+  await api("PUT", `/api/memory/${currentTopic}/${id}`, { data });
+  editingId = null;
+  toast("Saved");
+  await loadEntries();
+}
+
+async function deleteEntry(id) {
+  if (!confirm("Delete this entry?")) return;
+  await api("DELETE", `/api/memory/${currentTopic}/${id}`);
+  if (editingId === id) editingId = null;
+  await loadEntries();
+}
+
+async function addEntry() {
+  const res = await api("POST", `/api/memory/${currentTopic}`, { data: {} });
+  editingId = res.id;
+  await loadEntries();
+}
+
+async function addTopic() {
+  const name = $("new-topic").value.trim();
+  if (!name) return;
+  await api("POST", `/api/memory/${name}`, { data: {} });
+  $("new-topic").value = "";
+  currentTopic = name;
+  await loadTopics();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+// --- Init ---
+loadEnv();
+loadSpirit();
+</script>
+</body>
+</html>

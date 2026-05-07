@@ -1,6 +1,7 @@
 """Body: wires Brain + Memory + Skills + Spirit + Voice into a thinking loop."""
 import asyncio
 import json
+from datetime import date, datetime
 from typing import Any
 
 from brain.brain import Brain
@@ -55,7 +56,13 @@ class Body:
     async def _think(self, user_text: str, schedule_id: str | None = None) -> str:
         tools, dispatch = self._collect_tools()
 
-        messages: list[Message] = [Message(role="system", content=self._spirit.system_prompt)]
+        now = datetime.now().astimezone()
+        system = (
+            f"{self._spirit.system_prompt}\n\n"
+            f"Today: {now.date().isoformat()} ({now.strftime('%A')}). "
+            f"Current time: {now.strftime('%H:%M %Z')}."
+        )
+        messages: list[Message] = [Message(role="system", content=system)]
         messages.extend(self._recent_history())
         if schedule_id is None:
             messages.append(Message(role="user", content=user_text))
