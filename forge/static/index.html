@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Golem — Config</title>
+<title>Golem — Forge</title>
 <style>
   :root {
     --bg: #fafafa;
@@ -20,8 +20,19 @@
     background: var(--bg); color: var(--fg);
     max-width: 920px; margin-inline: auto;
   }
-  h1 { margin: 0 0 24px; font-size: 22px; }
+  h1 { margin: 0 0 16px; font-size: 22px; }
   h3 { margin: 0 0 12px; font-size: 15px; }
+  header.golem-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 12px 14px; margin: 0 0 20px;
+    background: white; border: 1px solid var(--border); border-radius: 6px;
+  }
+  header.golem-bar select {
+    flex: 0 1 220px; padding: 6px 10px; font-size: 14px;
+    border: 1px solid var(--border); border-radius: 4px; background: white;
+  }
+  header.golem-bar .grow { flex: 1; }
+  header.golem-bar label.toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
   nav { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
   nav button {
     background: none; border: none; padding: 10px 16px;
@@ -29,8 +40,8 @@
     border-bottom: 2px solid transparent;
   }
   nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
-  section { display: none; }
-  section.active { display: block; }
+  section.tab { display: none; }
+  section.tab.active { display: block; }
   .row { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
   .row label { width: 160px; padding-top: 8px; font-size: 13px; color: var(--muted); }
   .row .field { flex: 1; }
@@ -142,11 +153,37 @@
   .toast { position: fixed; bottom: 20px; right: 20px; background: var(--accent); color: white; padding: 10px 16px; border-radius: 4px; opacity: 0; transition: opacity .2s; }
   .toast.show { opacity: 1; }
   .toast.error { background: var(--danger); }
+  .empty-state { text-align: center; padding: 40px 16px; color: var(--muted); border: 1px dashed var(--border); border-radius: 6px; background: white; }
+  .empty-state h2 { font-size: 16px; color: var(--fg); margin: 0 0 8px; }
+  .skills-allowlist { display: flex; flex-direction: column; gap: 6px; }
+  .skills-allowlist label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+  .skills-allowlist input[type=checkbox] { width: auto; }
+  .state-badge { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #eee; color: var(--muted); }
+  .state-badge.running { background: #dff5e6; color: var(--accent); }
+  .state-badge.running::before { content: "● "; }
+  .state-badge.sleeping::before { content: "○ "; }
 </style>
 </head>
 <body>
-<h1>Golem — Config</h1>
+<h1>Golem — Forge</h1>
 
+<header class="golem-bar">
+  <select id="golem-select" onchange="onGolemChange()"></select>
+  <button class="ghost" onclick="newGolemFlow()">+ New</button>
+  <span id="state-badge" class="state-badge"></span>
+  <span class="grow"></span>
+  <label class="toggle"><input type="checkbox" id="golem-enabled" onchange="toggleEnabled()" /> autowake</label>
+  <button id="wake-btn" class="primary" onclick="wakeCurrent()">Wake</button>
+  <button id="sleep-btn" class="ghost" onclick="sleepCurrent()">Sleep</button>
+  <button class="danger" onclick="deleteCurrentGolem()">Delete</button>
+</header>
+
+<div id="empty-state" class="empty-state" style="display:none">
+  <h2>No golems yet</h2>
+  <div>Click <strong>+ New</strong> to forge your first golem.</div>
+</div>
+
+<div id="golem-editor">
 <nav>
   <button data-tab="spirit" class="active">Spirit</button>
   <button data-tab="memory">Memory</button>
@@ -155,27 +192,13 @@
   <button data-tab="dialog">Dialog</button>
 </nav>
 
-<section id="tab-brain">
-  <h3>Brain configuration</h3>
-  <div class="row"><label>Provider</label>
-    <div class="field"><select id="brain-provider" onchange="onProviderChange()"></select></div>
+<section id="tab-spirit" class="tab active">
+  <div class="row"><label>Name</label>
+    <div class="field inline-save">
+      <input id="golem-name" />
+      <button class="primary" onclick="saveName()">Rename</button>
+    </div>
   </div>
-  <div class="row"><label>Model</label>
-    <div class="field" id="brain-model-wrap"></div>
-  </div>
-  <div class="row" id="brain-key-row"><label>API key</label>
-    <div class="field"><input type="password" id="brain-api-key" placeholder="(secret)" /></div>
-  </div>
-  <div class="row" id="brain-base-url-row"><label>Base URL</label>
-    <div class="field"><input id="brain-base-url" placeholder="http://localhost:11434" /></div>
-  </div>
-  <div class="toolbar">
-    <button class="primary" onclick="saveBrain()">Save</button>
-    <span class="meta">Restart the bot to pick up changes.</span>
-  </div>
-</section>
-
-<section id="tab-spirit" class="active">
   <div class="subnav">
     <button data-sub="prompt" class="active" onclick="setSpiritSub('prompt')">System prompt</button>
     <button data-sub="schedules" onclick="setSpiritSub('schedules')">Schedules</button>
@@ -200,12 +223,38 @@
   </div>
 </section>
 
-<section id="tab-skills">
-  <h3>Available skills <span class="meta">(read-only — defined in code)</span></h3>
+<section id="tab-brain" class="tab">
+  <h3>Brain configuration</h3>
+  <div class="row"><label>Provider</label>
+    <div class="field"><select id="brain-provider" onchange="onProviderChange()"></select></div>
+  </div>
+  <div class="row"><label>Model</label>
+    <div class="field" id="brain-model-wrap"></div>
+  </div>
+  <div class="row" id="brain-key-row"><label>API key</label>
+    <div class="field"><input type="password" id="brain-api-key" placeholder="(secret)" /></div>
+  </div>
+  <div class="row" id="brain-base-url-row"><label>Base URL</label>
+    <div class="field"><input id="brain-base-url" placeholder="http://localhost:11434" /></div>
+  </div>
+  <div class="toolbar">
+    <button class="primary" onclick="saveBrain()">Save</button>
+    <span class="meta">If running, the golem reshapes automatically on save.</span>
+  </div>
+</section>
+
+<section id="tab-skills" class="tab">
+  <h3>Enabled for this golem</h3>
+  <div id="skills-allowlist" class="skills-allowlist"></div>
+  <div class="toolbar">
+    <button class="primary" onclick="saveSkills()">Save</button>
+  </div>
+
+  <h3 class="section-divider">All available skills <span class="meta">(read-only — defined in code)</span></h3>
   <div id="skills-list"></div>
 </section>
 
-<section id="tab-dialog">
+<section id="tab-dialog" class="tab">
   <h3>Telegram</h3>
   <div class="row"><label>Bot token</label>
     <div class="field"><input type="password" id="tg-token" placeholder="(from @BotFather)" /></div>
@@ -213,12 +262,12 @@
   <div class="row"><label>Chat ID</label>
     <div class="field">
       <input id="tg-chat-id" />
-      <div class="hint">The only chat allowed to talk to the bot. Messages from any other chat are silently ignored.</div>
+      <div class="hint">The only chat allowed to talk to this golem. Messages from any other chat are silently ignored.</div>
     </div>
   </div>
   <div class="toolbar">
     <button class="primary" onclick="saveDialog()">Save</button>
-    <span class="meta">Restart the bot to pick up changes.</span>
+    <span class="meta">If running, the golem reshapes automatically on save.</span>
   </div>
 
   <h3 class="section-divider">Send a message</h3>
@@ -234,47 +283,25 @@
   </div>
 </section>
 
-<section id="tab-memory">
-  <h3>Memory configuration</h3>
-  <div class="row"><label>Memory path</label>
-    <div class="field inline-save">
-      <input id="memory-path" placeholder="data/memory.json" />
-      <button class="primary" onclick="saveMemoryConfig()">Save</button>
-    </div>
-  </div>
-
+<section id="tab-memory" class="tab">
+  <div class="meta">Stored at <code id="memory-path-meta"></code></div>
   <h3 class="section-divider">Stored data <span class="meta">(read-only)</span></h3>
   <div class="topic-list" id="topic-list"></div>
   <div id="entries"></div>
 </section>
+</div>
 
 <div id="toast" class="toast"></div>
 
 <script>
 const $ = (id) => document.getElementById(id);
 
-// --- Tabs ---
-document.querySelectorAll("nav button").forEach(b => {
-  b.onclick = () => {
-    document.querySelectorAll("nav button").forEach(x => x.classList.remove("active"));
-    document.querySelectorAll("section").forEach(x => x.classList.remove("active"));
-    b.classList.add("active");
-    $("tab-" + b.dataset.tab).classList.add("active");
-    const t = b.dataset.tab;
-    if (t === "brain") loadBrain();
-    if (t === "spirit") loadSpirit();
-    if (t === "skills") loadSkills();
-    if (t === "dialog") loadDialog();
-    if (t === "memory") { loadMemoryConfig(); loadTopics(); }
-  };
-});
+let golems = [];        // [{name, enabled, brain, dialog_kind, skill_count}, ...]
+let current = null;     // full GolemSpec object for the selected golem
+let registry = { available: [], describe: [] };
+let schedules = [];     // current.schedules, kept in sync
 
-function toast(msg, error = false) {
-  const t = $("toast");
-  t.textContent = msg;
-  t.className = "toast show" + (error ? " error" : "");
-  setTimeout(() => t.className = "toast", 2000);
-}
+// --- API helper ---
 
 async function api(method, url, body) {
   const opts = { method, headers: { "Content-Type": "application/json" } };
@@ -286,6 +313,13 @@ async function api(method, url, body) {
     throw new Error(detail);
   }
   return r.json();
+}
+
+function toast(msg, error = false) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (error ? " error" : "");
+  setTimeout(() => t.className = "toast", 2000);
 }
 
 function escapeHtml(s) {
@@ -314,96 +348,231 @@ function relativeTime(iso) {
   return "";
 }
 
+// --- Golem list / selector ---
+
+async function loadRegistry() {
+  registry = await api("GET", "/api/skills");
+}
+
+async function loadGolems(selectName) {
+  golems = await api("GET", "/api/golems");
+  const sel = $("golem-select");
+  sel.innerHTML = golems.map(g => {
+    const dot = g.running ? "● " : "○ ";
+    return `<option value="${escapeHtml(g.name)}">${dot}${escapeHtml(g.name)}</option>`;
+  }).join("");
+  if (golems.length === 0) {
+    current = null;
+    $("empty-state").style.display = "";
+    $("golem-editor").style.display = "none";
+    return;
+  }
+  $("empty-state").style.display = "none";
+  $("golem-editor").style.display = "";
+  const target = selectName && golems.some(g => g.name === selectName)
+    ? selectName
+    : (current && golems.some(g => g.name === current.name) ? current.name : golems[0].name);
+  sel.value = target;
+  await loadCurrent(target);
+}
+
+async function loadCurrent(name) {
+  current = await api("GET", `/api/golems/${encodeURIComponent(name)}`);
+  schedules = current.schedules || [];
+  $("golem-enabled").checked = !!current.enabled;
+  $("golem-name").value = current.name;
+  renderRunningState();
+  // Refresh whichever tab is active
+  const active = document.querySelector("nav button.active");
+  if (active) refreshTab(active.dataset.tab);
+}
+
+function renderRunningState() {
+  const running = !!(current && current.running);
+  const badge = $("state-badge");
+  badge.textContent = running ? "running" : "sleeping";
+  badge.className = "state-badge " + (running ? "running" : "sleeping");
+  $("wake-btn").style.display = running ? "none" : "";
+  $("sleep-btn").style.display = running ? "" : "none";
+}
+
+async function wakeCurrent() {
+  if (!current) return;
+  try {
+    await api("POST", `/api/golems/${encodeURIComponent(current.name)}/awake`);
+  } catch (e) { return; }
+  await loadGolems(current.name);
+  toast("Awake");
+}
+
+async function sleepCurrent() {
+  if (!current) return;
+  await api("POST", `/api/golems/${encodeURIComponent(current.name)}/sleep`);
+  await loadGolems(current.name);
+  toast("Sleeping");
+}
+
+async function onGolemChange() {
+  await loadCurrent($("golem-select").value);
+}
+
+async function newGolemFlow() {
+  const name = (prompt("Name for the new golem (letters, digits, _ -):") || "").trim();
+  if (!name) return;
+  try {
+    await api("POST", "/api/golems", emptyGolem(name));
+  } catch (e) { return; }
+  await loadGolems(name);
+  toast("Created — fill in brain + dialog and enable.");
+}
+
+async function deleteCurrentGolem() {
+  if (!current) return;
+  if (!confirm(`Delete golem "${current.name}"? The memory file at data/${current.name}/memory.json will be left on disk.`)) return;
+  await api("DELETE", `/api/golems/${encodeURIComponent(current.name)}`);
+  current = null;
+  await loadGolems();
+  toast("Deleted");
+}
+
+async function toggleEnabled() {
+  if (!current) return;
+  current.enabled = $("golem-enabled").checked;
+  await saveCurrent();
+}
+
+async function saveName() {
+  if (!current) return;
+  const newName = $("golem-name").value.trim();
+  if (!newName || newName === current.name) return;
+  current.name = newName;
+  await saveCurrent(newName);
+}
+
+function emptyGolem(name) {
+  return {
+    name,
+    enabled: false,
+    brain: { provider: "mistral", model: "", api_key: "", base_url: "" },
+    dialog: { kind: "telegram", telegram: { token: "", chat_id: 0 } },
+    system_prompt: "",
+    schedules: [],
+    skills: [],
+  };
+}
+
+async function saveCurrent(switchTo) {
+  // Send the full spec back. The server replaces it wholesale.
+  const url = `/api/golems/${encodeURIComponent($("golem-select").value)}`;
+  const payload = {
+    name: current.name,
+    enabled: current.enabled,
+    brain: current.brain,
+    dialog: current.dialog,
+    system_prompt: current.system_prompt,
+    schedules,
+    skills: current.skills,
+  };
+  await api("PUT", url, payload);
+  await loadGolems(switchTo || current.name);
+}
+
+// --- Tabs ---
+
+document.querySelectorAll("nav button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("nav button").forEach(x => x.classList.remove("active"));
+    document.querySelectorAll("section.tab").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    $("tab-" + b.dataset.tab).classList.add("active");
+    refreshTab(b.dataset.tab);
+  };
+});
+
+function refreshTab(name) {
+  if (!current) return;
+  if (name === "brain") renderBrainTab();
+  if (name === "spirit") renderSpiritTab();
+  if (name === "skills") renderSkillsTab();
+  if (name === "dialog") { renderDialogTab(); loadDialogMessages(); }
+  if (name === "memory") { $("memory-path-meta").textContent = `data/${current.name}/memory.json`; loadTopics(); }
+}
+
 // --- Brain ---
+
 const PROVIDERS = {
   mistral: {
     label: "Mistral",
     models: ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest", "ministral-8b-latest", "ministral-3b-latest", "codestral-latest", "open-mistral-nemo"],
-    needsApiKey: true,
-    needsBaseUrl: false,
+    needsApiKey: true, needsBaseUrl: false,
   },
   anthropic: {
     label: "Anthropic",
     models: ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5"],
-    needsApiKey: true,
-    needsBaseUrl: false,
+    needsApiKey: true, needsBaseUrl: false,
   },
   openai: {
     label: "OpenAI",
     models: ["gpt-5", "gpt-4.1", "gpt-4o", "gpt-4o-mini", "o4-mini"],
-    needsApiKey: true,
-    needsBaseUrl: false,
+    needsApiKey: true, needsBaseUrl: false,
   },
   ollama: {
     label: "Ollama (local)",
     models: ["llama3.2", "llama3.1", "mistral", "qwen2.5", "phi3.5", "gemma2"],
-    needsApiKey: false,
-    needsBaseUrl: true,
-    modelFreeform: true,
+    needsApiKey: false, needsBaseUrl: true, modelFreeform: true,
   },
 };
 
-let brainState = { provider: "mistral", model: "", apiKey: "", baseUrl: "" };
-
-async function loadBrain() {
-  const data = await api("GET", "/api/env");
-  brainState = {
-    provider: data.values.BRAIN_PROVIDER || "mistral",
-    model: data.values.BRAIN_MODEL || "",
-    apiKey: data.values.BRAIN_API_KEY || "",
-    baseUrl: data.values.BRAIN_BASE_URL || "",
-  };
+function renderBrainTab() {
   const psel = $("brain-provider");
   psel.innerHTML = Object.entries(PROVIDERS)
-    .map(([k, m]) => `<option value="${k}" ${k === brainState.provider ? "selected" : ""}>${m.label}</option>`)
+    .map(([k, m]) => `<option value="${k}" ${k === current.brain.provider ? "selected" : ""}>${m.label}</option>`)
     .join("");
   renderBrainFields();
 }
 
 function onProviderChange() {
-  brainState.provider = $("brain-provider").value;
+  current.brain.provider = $("brain-provider").value;
   renderBrainFields();
 }
 
 function renderBrainFields() {
-  const meta = PROVIDERS[brainState.provider] || PROVIDERS.mistral;
+  const meta = PROVIDERS[current.brain.provider] || PROVIDERS.mistral;
   const mwrap = $("brain-model-wrap");
   if (meta.modelFreeform) {
     mwrap.innerHTML = `
-      <input id="brain-model" list="brain-model-list" value="${escapeHtml(brainState.model || meta.models[0])}" />
+      <input id="brain-model" list="brain-model-list" value="${escapeHtml(current.brain.model || meta.models[0])}" />
       <datalist id="brain-model-list">${meta.models.map(m => `<option value="${escapeHtml(m)}">`).join("")}</datalist>
     `;
   } else {
     const opts = meta.models.map(m =>
-      `<option value="${escapeHtml(m)}" ${m === brainState.model ? "selected" : ""}>${escapeHtml(m)}</option>`
+      `<option value="${escapeHtml(m)}" ${m === current.brain.model ? "selected" : ""}>${escapeHtml(m)}</option>`
     ).join("");
     mwrap.innerHTML = `<select id="brain-model">${opts}</select>`;
   }
   $("brain-key-row").style.display = meta.needsApiKey ? "" : "none";
-  $("brain-api-key").value = brainState.apiKey;
+  $("brain-api-key").value = current.brain.api_key || "";
   $("brain-base-url-row").style.display = meta.needsBaseUrl ? "" : "none";
-  $("brain-base-url").value = brainState.baseUrl;
+  $("brain-base-url").value = current.brain.base_url || "";
 }
 
 async function saveBrain() {
-  const values = {
-    BRAIN_PROVIDER: $("brain-provider").value,
-    BRAIN_MODEL: $("brain-model").value,
-    BRAIN_API_KEY: $("brain-api-key").value,
-    BRAIN_BASE_URL: $("brain-base-url").value,
+  current.brain = {
+    provider: $("brain-provider").value,
+    model: $("brain-model").value,
+    api_key: $("brain-api-key").value,
+    base_url: $("brain-base-url").value,
   };
-  await api("PUT", "/api/env", { values });
+  await saveCurrent();
   toast("Saved");
 }
 
 // --- Spirit ---
-let schedules = [];
 
-async function loadSpirit() {
-  const s = await api("GET", "/api/spirit");
-  $("spirit-prompt").value = s.system_prompt;
-  $("spirit-prompt-display").textContent = s.system_prompt;
-  schedules = s.schedules || [];
+function renderSpiritTab() {
+  $("spirit-prompt").value = current.system_prompt || "";
+  $("spirit-prompt-display").textContent = current.system_prompt || "";
+  schedules = current.schedules || [];
   renderSchedules();
 }
 
@@ -496,13 +665,7 @@ function renderCronFields(i, mode, cron) {
       <div class="cron-row">
         <input value='${escapeHtml(JSON.stringify(cron || {}))}' oninput="updateCustomCron(${i}, this.value)" placeholder='{"hour": 8, "minute": 0}' />
       </div>
-      <div class="hint">APScheduler cron kwargs. Each value can be a number, comma-list, range, or <code>*/N</code>. Examples:
-        <ul>
-          <li><code>{"hour": "9,18", "minute": 0}</code> — 09:00 and 18:00 daily</li>
-          <li><code>{"minute": "*/15"}</code> — every 15 minutes</li>
-          <li><code>{"day": 1, "hour": 9}</code> — first of every month at 09:00</li>
-        </ul>
-      </div>
+      <div class="hint">APScheduler cron kwargs. Each value can be a number, comma-list, range, or <code>*/N</code>.</div>
     `;
   }
   const time = cronTime(cron);
@@ -540,10 +703,10 @@ function cronSummary(cron) {
 }
 
 function setCronMode(i, mode) {
-  const current = schedules[i].cron || {};
-  const time = cronTime(current);
-  const days = typeof current.day_of_week === "string"
-    ? current.day_of_week.split(",").map(s => s.trim()).filter(d => /^[a-z]{3}$/.test(d))
+  const cur = schedules[i].cron || {};
+  const time = cronTime(cur);
+  const days = typeof cur.day_of_week === "string"
+    ? cur.day_of_week.split(",").map(s => s.trim()).filter(d => /^[a-z]{3}$/.test(d))
     : [];
   if (mode !== "custom") schedules[i].cron = buildCron(mode, time, days);
   renderSchedules();
@@ -585,19 +748,27 @@ function setSpiritSub(name) {
 }
 
 async function saveSpirit() {
-  await api("PUT", "/api/spirit", {
-    system_prompt: $("spirit-prompt").value,
-    schedules,
-  });
+  current.system_prompt = $("spirit-prompt").value;
+  current.schedules = schedules;
+  await saveCurrent();
   toast("Saved");
 }
 
-// --- Skills (read-only) ---
-async function loadSkills() {
-  const skills = await api("GET", "/api/skills");
-  const wrap = $("skills-list");
-  wrap.innerHTML = "";
-  skills.forEach(s => {
+// --- Skills ---
+
+function renderSkillsTab() {
+  const enabled = new Set(current.skills || []);
+  const wrap = $("skills-allowlist");
+  wrap.innerHTML = registry.available.map(name => `
+    <label>
+      <input type="checkbox" data-skill="${escapeHtml(name)}" ${enabled.has(name) ? "checked" : ""} />
+      ${escapeHtml(name)}
+    </label>
+  `).join("");
+
+  const list = $("skills-list");
+  list.innerHTML = "";
+  registry.describe.forEach(s => {
     const div = document.createElement("div");
     div.className = "skill-card";
     div.innerHTML = `
@@ -613,42 +784,54 @@ async function loadSkills() {
         </div>
       `).join("")}
     `;
-    wrap.appendChild(div);
+    list.appendChild(div);
   });
+}
+
+async function saveSkills() {
+  const checked = Array.from(document.querySelectorAll('#skills-allowlist input[type=checkbox]'))
+    .filter(c => c.checked)
+    .map(c => c.dataset.skill);
+  current.skills = checked;
+  await saveCurrent();
+  toast("Saved");
 }
 
 // --- Dialog ---
-async function loadDialog() {
-  const data = await api("GET", "/api/env");
-  $("tg-token").value = data.values.TELEGRAM_TOKEN || "";
-  $("tg-chat-id").value = data.values.TELEGRAM_CHAT_ID || "";
-  await loadDialogMessages();
+
+function renderDialogTab() {
+  const tg = (current.dialog && current.dialog.telegram) || {};
+  $("tg-token").value = tg.token || "";
+  $("tg-chat-id").value = tg.chat_id || "";
 }
 
 async function saveDialog() {
-  await api("PUT", "/api/env", {
-    values: {
-      TELEGRAM_TOKEN: $("tg-token").value,
-      TELEGRAM_CHAT_ID: $("tg-chat-id").value,
+  current.dialog = {
+    kind: "telegram",
+    telegram: {
+      token: $("tg-token").value,
+      chat_id: parseInt($("tg-chat-id").value, 10) || 0,
     },
-  });
+  };
+  await saveCurrent();
   toast("Saved");
 }
 
 async function dialogSend() {
   const text = $("dialog-send-text").value.trim();
-  if (!text) return;
-  await api("POST", "/api/dialog/send", { text });
+  if (!text || !current) return;
+  await api("POST", `/api/golems/${encodeURIComponent(current.name)}/dialog/send`, { text });
   $("dialog-send-text").value = "";
   toast("Sent");
   await loadDialogMessages();
 }
 
 async function loadDialogMessages() {
+  if (!current) return;
   const wrap = $("dialog-messages");
   let entries;
   try {
-    entries = await api("GET", "/api/memory/conversation");
+    entries = await api("GET", `/api/golems/${encodeURIComponent(current.name)}/memory/conversation`);
   } catch (e) {
     wrap.innerHTML = `<div class="meta">No conversation history yet.</div>`;
     return;
@@ -670,35 +853,13 @@ async function loadDialogMessages() {
   }).join("");
 }
 
-// --- Memory (read-only) ---
+// --- Memory ---
+
 let currentTopic = null;
 
-async function loadMemoryConfig() {
-  const data = await api("GET", "/api/env");
-  $("memory-path").value = data.values.MEMORY_PATH || "";
-}
-
-async function saveMemoryConfig() {
-  await api("PUT", "/api/env", { values: { MEMORY_PATH: $("memory-path").value } });
-  await restartBot();
-}
-
-async function restartBot() {
-  let res;
-  try {
-    res = await api("POST", "/api/restart");
-  } catch (e) {
-    toast("Saved — restart bot manually to apply", true);
-    return;
-  }
-  if (res.status === "signaled") toast("Saved — bot restarting…");
-  else if (res.status === "not_running") toast("Saved — bot was not running");
-  else if (res.status === "stale") toast("Saved — bot was already stopped");
-  else toast("Saved");
-}
-
 async function loadTopics() {
-  const topics = await api("GET", "/api/memory/topics");
+  if (!current) return;
+  const topics = await api("GET", `/api/golems/${encodeURIComponent(current.name)}/memory/topics`);
   const wrap = $("topic-list");
   wrap.innerHTML = "";
   topics.forEach(t => {
@@ -723,7 +884,8 @@ async function selectTopic(t) {
 }
 
 async function loadEntries() {
-  const entries = await api("GET", `/api/memory/${currentTopic}`);
+  if (!current || !currentTopic) return;
+  const entries = await api("GET", `/api/golems/${encodeURIComponent(current.name)}/memory/${encodeURIComponent(currentTopic)}`);
   entries.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
   const isConvo = currentTopic === "conversation";
   const hideId = isConvo;
@@ -753,6 +915,7 @@ async function loadEntries() {
 }
 
 // --- Renderers shared between Memory and Dialog ---
+
 function renderKV(value) {
   if (value === null || value === undefined) return `<span class="v-null">${value === null ? "null" : "—"}</span>`;
   if (typeof value === "boolean") return `<span class="v-bool">${value}</span>`;
@@ -787,8 +950,13 @@ function renderChatBubble(data) {
   `;
 }
 
+
 // --- Init ---
-loadSpirit();
+
+(async () => {
+  await loadRegistry();
+  await loadGolems();
+})();
 </script>
 </body>
 </html>

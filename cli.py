@@ -1,13 +1,11 @@
 """`golem` console script — dispatches subcommands."""
 import sys
 
-import awake
-from workshop import server as workshop_server
+from forge import server as forge_server
 
 
 _COMMANDS = {
-    "awake": awake.main,
-    "workshop": workshop_server.main,
+    "forge": forge_server.main,
 }
 
 

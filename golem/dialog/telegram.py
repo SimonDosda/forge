@@ -1,7 +1,7 @@
 import sys
 from typing import Any
 
-from dialog.dialog import IncomingHandler
+from golem.dialog.dialog import IncomingHandler
 
 
 class TelegramDialog:

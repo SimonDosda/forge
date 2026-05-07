@@ -1,20 +1,23 @@
 import json
 from typing import Any
 
-from brain.brain import BrainConfig
-from core import BrainResponse, Message, ToolCall, ToolSpec
+from golem.brain.brain import BrainConfig
+from golem.core import BrainResponse, Message, ToolCall, ToolSpec
 
 
-class MistralBrain:
+class OpenAIBrain:
     def __init__(self, config: BrainConfig, client: Any | None = None):
         self._model = config.model
         if client is None:
-            from mistralai.client.sdk import Mistral
-            client = Mistral(api_key=config.api_key)
+            from openai import OpenAI
+            kwargs: dict[str, Any] = {"api_key": config.api_key}
+            if config.base_url:
+                kwargs["base_url"] = config.base_url
+            client = OpenAI(**kwargs)
         self._client = client
 
     def chat(self, messages: list[Message], tools: list[ToolSpec] = ()) -> BrainResponse:
-        response = self._client.chat.complete(
+        response = self._client.chat.completions.create(
             model=self._model,
             messages=[_to_wire(m) for m in messages],
             tools=[_tool_to_wire(t) for t in tools] or None,
@@ -22,11 +25,7 @@ class MistralBrain:
         )
         msg = response.choices[0].message
         calls = tuple(
-            ToolCall(
-                id=c.id,
-                name=c.function.name,
-                arguments=_safe_json(c.function.arguments),
-            )
+            ToolCall(id=c.id, name=c.function.name, arguments=_safe_json(c.function.arguments))
             for c in (getattr(msg, "tool_calls", None) or [])
         )
         return BrainResponse(content=getattr(msg, "content", "") or "", tool_calls=calls)

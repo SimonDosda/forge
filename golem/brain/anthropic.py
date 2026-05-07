@@ -1,7 +1,7 @@
 from typing import Any
 
-from brain.brain import BrainConfig
-from core import BrainResponse, Message, ToolCall, ToolSpec
+from golem.brain.brain import BrainConfig
+from golem.core import BrainResponse, Message, ToolCall, ToolSpec
 
 
 class AnthropicBrain:

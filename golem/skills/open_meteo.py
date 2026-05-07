@@ -2,7 +2,7 @@ from typing import Any
 
 import requests
 
-from core import ToolSpec
+from golem.core import ToolSpec
 
 
 _API_URL = "https://api.open-meteo.com/v1/forecast"

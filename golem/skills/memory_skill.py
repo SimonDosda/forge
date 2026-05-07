@@ -1,7 +1,7 @@
 from typing import Any
 
-from core import ToolSpec
-from memory.memory import Entry, Memory
+from golem.core import ToolSpec
+from golem.memory.memory import Entry, Memory
 
 
 class MemorySkill:

@@ -9,7 +9,7 @@ from typing import Any
 from tinydb import Query, TinyDB
 from tinydb.storages import JSONStorage, touch
 
-from memory.memory import Entry
+from golem.memory.memory import Entry
 
 
 _TOPIC_RE = re.compile(r"^[a-zA-Z0-9_\-]+$")

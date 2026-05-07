@@ -4,8 +4,8 @@ from typing import Any
 
 import requests
 
-from brain.brain import BrainConfig
-from core import BrainResponse, Message, ToolCall, ToolSpec
+from golem.brain.brain import BrainConfig
+from golem.core import BrainResponse, Message, ToolCall, ToolSpec
 
 
 class OllamaBrain:

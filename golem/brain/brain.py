@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Protocol
 
-from core import BrainResponse, Message, ToolSpec
+from golem.core import BrainResponse, Message, ToolSpec
 
 
 @dataclass(frozen=True)
@@ -24,15 +24,15 @@ def build_brain(config: BrainConfig) -> Brain:
     """Factory: pick the provider implementation from config."""
     provider = config.provider.lower()
     if provider == "mistral":
-        from brain.mistral import MistralBrain
+        from golem.brain.mistral import MistralBrain
         return MistralBrain(config)
     if provider == "anthropic":
-        from brain.anthropic import AnthropicBrain
+        from golem.brain.anthropic import AnthropicBrain
         return AnthropicBrain(config)
     if provider == "openai":
-        from brain.openai import OpenAIBrain
+        from golem.brain.openai import OpenAIBrain
         return OpenAIBrain(config)
     if provider == "ollama":
-        from brain.ollama import OllamaBrain
+        from golem.brain.ollama import OllamaBrain
         return OllamaBrain(config)
     raise ValueError(f"unknown brain provider: {config.provider}")

@@ -1,6 +1,6 @@
 from typing import Any, Protocol
 
-from core import ToolSpec
+from golem.core import ToolSpec
 
 
 class Skill(Protocol):
