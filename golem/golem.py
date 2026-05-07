@@ -192,9 +192,11 @@ class Golem:
         tools, dispatch = self._collect_tools()
 
         now = datetime.now().astimezone()
+        topics_block = _format_topics(self._spirit.topics)
         system = (
-            f"{self._spirit.mission}\n\n"
-            f"Today: {now.date().isoformat()} ({now.strftime('%A')}). "
+            f"{self._spirit.mission}"
+            f"{topics_block}"
+            f"\n\nToday: {now.date().isoformat()} ({now.strftime('%A')}). "
             f"Current time: {now.strftime('%H:%M %Z')}."
         )
         messages: list[Message] = [Message(role="system", content=system)]
@@ -264,3 +266,18 @@ def _to_json(value: Any) -> str:
         return json.dumps(value, default=str, ensure_ascii=False)
     except TypeError:
         return json.dumps(str(value))
+
+
+def _format_topics(topics) -> str:
+    """Render described topics as a prompt block.
+
+    Topics with no description are skipped — they're plain storage and don't
+    need explanation. Returns an empty string if nothing to inject.
+    """
+    described = [t for t in topics if t.description.strip()]
+    if not described:
+        return ""
+    lines = ["", "", "Memory topics:"]
+    for t in described:
+        lines.append(f"- {t.id}: {t.description.strip()}")
+    return "\n".join(lines)

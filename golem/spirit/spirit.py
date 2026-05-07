@@ -11,7 +11,7 @@ from typing import Any, TYPE_CHECKING
 from apscheduler.triggers.cron import CronTrigger
 
 if TYPE_CHECKING:
-    from forge.store import ForgeStore
+    from forge.store import ForgeStore, TopicSpec
 
 
 @dataclass(frozen=True)
@@ -49,6 +49,10 @@ class Spirit:
     @property
     def routines(self) -> list[Routine]:
         return list(self._store.get_golem(self._id).routines)
+
+    @property
+    def topics(self) -> list["TopicSpec"]:
+        return list(self._store.get_golem(self._id).topics)
 
     @property
     def version(self) -> int:

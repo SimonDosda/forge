@@ -88,6 +88,8 @@
   .topic-list { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
   .topic-list button { background: white; border: 1px solid var(--border); padding: 4px 10px; border-radius: 14px; cursor: pointer; font-size: 13px; }
   .topic-list button.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .topic-list button.topic-add { color: var(--muted); border-style: dashed; }
+  .topic-list button.topic-add:hover { color: var(--accent); border-color: var(--accent); border-style: solid; }
   .meta { font-size: 11px; color: var(--muted); margin-top: 6px; }
   .kv { font-size: 14px; }
   .kv-table { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; }
@@ -302,8 +304,29 @@
 </section>
 
 <section id="tab-memory" class="tab">
-  <div class="topic-list" id="topic-list"></div>
-  <div id="entries"></div>
+  <div class="topic-list" id="memory-topic-tabs"></div>
+  <div id="memory-topic-detail" style="display:none">
+    <label class="block-label">Description</label>
+    <div class="hint" style="margin-bottom: 6px">
+      Injected into the mission prompt so the brain knows this topic's purpose and conventions.
+      Leave empty to omit from the prompt.
+    </div>
+    <div class="prompt-wrap">
+      <div id="memory-topic-desc-display" class="prompt-display" onclick="startPromptEdit(this.parentNode)"></div>
+      <textarea id="memory-topic-desc" rows="6" onblur="endPromptEdit(this.parentNode)"></textarea>
+    </div>
+    <div class="toolbar">
+      <button class="primary" onclick="saveCurrentTopicDesc()">Save</button>
+      <button class="danger" onclick="deleteCurrentTopic()">Delete topic</button>
+    </div>
+
+    <h3 class="section-divider">Stored data <span class="meta">(read-only)</span></h3>
+    <div id="entries"></div>
+  </div>
+  <div id="memory-empty" class="empty-state" style="display:none">
+    <h2>No topics yet</h2>
+    <div>Click <strong>+ Topic</strong> above to create one. Topics also get auto-created when the brain calls memory tools.</div>
+  </div>
 </section>
 </div>
 </div>
@@ -318,6 +341,7 @@ let current = null;     // full GolemSpec object for the selected golem
 let currentId = null;   // the id segment in the URL (what we PUT to)
 let registry = { available: [], describe: [] };
 let routines = [];      // current.routines, kept in sync
+let topicConfigs = [];  // current.topics, kept in sync
 
 // --- API helper ---
 
@@ -378,7 +402,8 @@ function currentRoute() {
   if (parts.length === 0) return { view: "list" };
   const id = decodeURIComponent(parts[0]);
   const tab = parts[1] && TABS.includes(parts[1]) ? parts[1] : DEFAULT_TAB;
-  return { view: "detail", id, tab };
+  const topic = tab === "memory" && parts[2] ? decodeURIComponent(parts[2]) : null;
+  return { view: "detail", id, tab, topic };
 }
 
 function navigate(path, replace = false) {
@@ -405,11 +430,11 @@ async function applyRoute() {
   } else {
     showDetailView();
     if (current && currentId === route.id) {
-      selectTab(route.tab);
+      selectTab(route.tab, route.topic);
       return;
     }
     try {
-      await loadCurrent(route.id, route.tab);
+      await loadCurrent(route.id, route.tab, route.topic);
     } catch (e) {
       navigate("/", true);
     }
@@ -502,21 +527,25 @@ async function handleListAction(action, id, name) {
   await loadGolemList();
 }
 
-async function loadCurrent(id, tab) {
+async function loadCurrent(id, tab, topic) {
   currentId = id;
   current = await api("GET", `/api/golems/${encodeURIComponent(id)}`);
   routines = current.routines || [];
+  topicConfigs = current.topics || [];
   $("golem-name").value = current.name;
   $("golem-description").value = current.description || "";
   $("page-title-text").textContent = current.name;
   document.title = current.name;
-  selectTab(tab || DEFAULT_TAB);
+  selectTab(tab || DEFAULT_TAB, topic);
 }
 
-function selectTab(tab) {
+function selectTab(tab, topic) {
   if (!TABS.includes(tab)) tab = DEFAULT_TAB;
   document.querySelectorAll("nav button").forEach(x => x.classList.toggle("active", x.dataset.tab === tab));
   document.querySelectorAll("section.tab").forEach(x => x.classList.toggle("active", x.id === "tab-" + tab));
+  if (tab === "memory") {
+    currentTopic = topic || currentTopic;
+  }
   refreshTab(tab);
 }
 
@@ -555,6 +584,7 @@ function emptyGolem(name) {
     dialog: { kind: "telegram", telegram: { token: "", chat_id: 0 } },
     mission: "",
     routines: [],
+    topics: [],
     skills: [],
   };
 }
@@ -572,10 +602,12 @@ async function saveCurrent() {
     dialog: current.dialog,
     mission: current.mission,
     routines,
+    topics: topicConfigs,
     skills: current.skills,
   };
   await api("PUT", url, payload);
-  await loadCurrent(currentId);
+  const route = currentRoute();
+  await loadCurrent(currentId, route.tab, route.topic);
 }
 
 // --- Tabs ---
@@ -585,9 +617,10 @@ document.querySelectorAll("nav button").forEach(b => {
     const tab = b.dataset.tab;
     selectTab(tab);
     if (currentId) {
-      const path = tab === DEFAULT_TAB
-        ? `/${encodeURIComponent(currentId)}`
-        : `/${encodeURIComponent(currentId)}/${tab}`;
+      let path;
+      if (tab === DEFAULT_TAB) path = `/${encodeURIComponent(currentId)}`;
+      else if (tab === "memory" && currentTopic) path = `/${encodeURIComponent(currentId)}/memory/${encodeURIComponent(currentTopic)}`;
+      else path = `/${encodeURIComponent(currentId)}/${tab}`;
       if (window.location.pathname !== path) history.pushState({}, "", path);
     }
   };
@@ -599,7 +632,7 @@ function refreshTab(name) {
   if (name === "spirit") renderSpiritTab();
   if (name === "skills") renderSkillsTab();
   if (name === "dialog") { renderDialogTab(); loadDialogMessages(); }
-  if (name === "memory") loadTopics();
+  if (name === "memory") renderMemoryTab();
 }
 
 // --- Brain ---
@@ -969,32 +1002,101 @@ async function loadDialogMessages() {
 
 let currentTopic = null;
 
-async function loadTopics() {
+async function renderMemoryTab() {
   if (!current) return;
-  const topics = await api("GET", `/api/golems/${encodeURIComponent(current.id)}/memory/topics`);
-  const wrap = $("topic-list");
-  wrap.innerHTML = "";
-  topics.forEach(t => {
-    const b = document.createElement("button");
-    b.textContent = t;
-    if (t === currentTopic) b.classList.add("active");
-    b.onclick = () => selectTopic(t);
-    wrap.appendChild(b);
-  });
-  if (currentTopic && topics.includes(currentTopic)) {
-    loadEntries();
-  } else if (topics.length > 0) {
-    selectTopic(topics[0]);
+  const stored = await api("GET", `/api/golems/${encodeURIComponent(current.id)}/memory/topics`);
+  const all = Array.from(new Set([...topicConfigs.map(t => t.id), ...stored])).sort();
+  renderMemoryTopicTabs(all);
+  if (currentTopic && all.includes(currentTopic)) {
+    showMemoryTopicDetail(currentTopic);
+  } else if (all.length > 0) {
+    selectMemoryTopic(all[0]);
   } else {
     currentTopic = null;
-    $("entries").innerHTML = "";
+    $("memory-empty").style.display = "";
+    $("memory-topic-detail").style.display = "none";
   }
 }
 
-async function selectTopic(t) {
-  currentTopic = t;
-  await loadTopics();
-  await loadEntries();
+function renderMemoryTopicTabs(topicIds) {
+  const wrap = $("memory-topic-tabs");
+  wrap.innerHTML = "";
+  topicIds.forEach(id => {
+    const b = document.createElement("button");
+    b.textContent = id;
+    if (id === currentTopic) b.classList.add("active");
+    b.onclick = () => selectMemoryTopic(id, true);
+    wrap.appendChild(b);
+  });
+  const add = document.createElement("button");
+  add.textContent = "+ Topic";
+  add.className = "topic-add";
+  add.onclick = addMemoryTopic;
+  wrap.appendChild(add);
+}
+
+function selectMemoryTopic(id, fromUser = false) {
+  currentTopic = id;
+  const path = `/${encodeURIComponent(currentId)}/memory/${encodeURIComponent(id)}`;
+  if (window.location.pathname !== path) {
+    if (fromUser) history.pushState({}, "", path);
+    else history.replaceState({}, "", path);
+  }
+  renderMemoryTab();
+}
+
+function showMemoryTopicDetail(id) {
+  $("memory-empty").style.display = "none";
+  const detail = $("memory-topic-detail");
+  detail.style.display = "";
+  const cfg = topicConfigs.find(t => t.id === id);
+  const desc = cfg ? cfg.description : "";
+  $("memory-topic-desc").value = desc || "";
+  $("memory-topic-desc-display").textContent = desc || "";
+  loadEntries();
+}
+
+async function addMemoryTopic() {
+  const id = (prompt("Topic id (letters, digits, _ -):") || "").trim();
+  if (!id) return;
+  if (topicConfigs.some(t => t.id === id)) {
+    toast(`Topic "${id}" already exists`, true);
+    selectMemoryTopic(id);
+    return;
+  }
+  topicConfigs.push({ id, description: "" });
+  current.topics = topicConfigs;
+  try {
+    await saveCurrent();
+    toast("Topic added");
+    selectMemoryTopic(id);
+  } catch (e) { /* api() already toasted */ }
+}
+
+async function saveCurrentTopicDesc() {
+  if (!currentTopic) return;
+  const desc = $("memory-topic-desc").value;
+  let cfg = topicConfigs.find(t => t.id === currentTopic);
+  if (!cfg) {
+    cfg = { id: currentTopic, description: "" };
+    topicConfigs.push(cfg);
+  }
+  cfg.description = desc;
+  current.topics = topicConfigs;
+  await saveCurrent();
+  toast("Saved");
+}
+
+async function deleteCurrentTopic() {
+  if (!currentTopic) return;
+  if (!confirm(`Remove topic "${currentTopic}" from the spec? Stored entries in memory will be left untouched.`)) return;
+  topicConfigs = topicConfigs.filter(t => t.id !== currentTopic);
+  current.topics = topicConfigs;
+  currentTopic = null;
+  await saveCurrent();
+  toast("Topic removed");
+  history.replaceState({}, "", `/${encodeURIComponent(currentId)}/memory`);
+  renderMemoryTab();
 }
 
 async function loadEntries() {

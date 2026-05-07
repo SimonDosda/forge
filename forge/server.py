@@ -23,6 +23,7 @@ from forge.store import (
     GolemNotFoundError,
     GolemSpec,
     TelegramSpec,
+    TopicSpec,
 )
 from forge.supervisor import Supervisor
 from golem.memory.tinydb_store import TinyDbMemory
@@ -60,6 +61,11 @@ class RoutineModel(BaseModel):
     name: str = ""
 
 
+class TopicModel(BaseModel):
+    id: str
+    description: str = ""
+
+
 class GolemModel(BaseModel):
     id: str = ""
     name: str
@@ -69,6 +75,7 @@ class GolemModel(BaseModel):
     dialog: DialogModel = Field(default_factory=DialogModel)
     mission: str = ""
     routines: list[RoutineModel] = Field(default_factory=list)
+    topics: list[TopicModel] = Field(default_factory=list)
     skills: list[str] = Field(default_factory=list)
 
 
@@ -277,6 +284,10 @@ def build_app(env_path: str = ".env") -> FastAPI:
     def golem_page_tab(id_: str, tab: str) -> FileResponse:
         return FileResponse(_STATIC / "index.html")
 
+    @app.get("/{id_}/{tab}/{topic}")
+    def golem_page_topic(id_: str, tab: str, topic: str) -> FileResponse:
+        return FileResponse(_STATIC / "index.html")
+
     return app
 
 
@@ -310,6 +321,9 @@ def _from_payload(p: GolemModel) -> GolemSpec:
         routines=tuple(
             Routine(id=r.id, cron=r.cron, prompt=r.prompt, name=r.name) for r in p.routines
         ),
+        topics=tuple(
+            TopicSpec(id=t.id, description=t.description) for t in p.topics if t.id
+        ),
         skills=tuple(p.skills),
     )
 
@@ -341,6 +355,7 @@ def _to_full(spec: GolemSpec, supervisor: Supervisor) -> dict[str, Any]:
         },
         "mission": spec.mission,
         "routines": [asdict(r) for r in spec.routines],
+        "topics": [asdict(t) for t in spec.topics],
         "skills": list(spec.skills),
         "version": spec.version,
     }

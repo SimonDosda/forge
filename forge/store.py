@@ -47,6 +47,16 @@ class DialogSpec:
 
 
 @dataclass(frozen=True)
+class TopicSpec:
+    """Per-topic configuration. The description is injected into the mission
+    prompt so the brain knows the topic's purpose and conventions without
+    repeating them in the main mission text.
+    """
+    id: str
+    description: str = ""
+
+
+@dataclass(frozen=True)
 class GolemSpec:
     id: str = ""           # stable primary key; immutable after creation
     name: str = ""
@@ -56,6 +66,7 @@ class GolemSpec:
     dialog: DialogSpec = field(default_factory=DialogSpec)
     mission: str = ""
     routines: tuple[Routine, ...] = ()
+    topics: tuple[TopicSpec, ...] = ()
     skills: tuple[str, ...] = ()
     version: int = 0
 
@@ -221,6 +232,7 @@ def _to_doc(spec: GolemSpec) -> dict[str, Any]:
         },
         "mission": spec.mission,
         "routines": [asdict(r) for r in spec.routines],
+        "topics": [asdict(t) for t in spec.topics],
         "skills": list(spec.skills),
         "version": spec.version,
     }
@@ -259,6 +271,14 @@ def _to_spec(doc: dict[str, Any]) -> GolemSpec:
         ),
         mission=str(doc.get("mission", "")),
         routines=routines,
+        topics=tuple(
+            TopicSpec(
+                id=str(t["id"]),
+                description=str(t.get("description", "")),
+            )
+            for t in doc.get("topics", [])
+            if t.get("id")
+        ),
         skills=tuple(str(s) for s in doc.get("skills", [])),
         version=int(doc.get("version", 0)),
     )
