@@ -13,7 +13,7 @@ class Settings:
     brain_api_key: str
     brain_base_url: str
 
-    # Voice (telegram for now)
+    # Dialog (telegram for now)
     telegram_token: str
     telegram_chat_id: int
 

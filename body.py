@@ -1,4 +1,4 @@
-"""Body: wires Brain + Memory + Skills + Spirit + Voice into a thinking loop."""
+"""Body: wires Brain + Memory + Skills + Spirit + Dialog into a thinking loop."""
 import asyncio
 import json
 from datetime import date, datetime
@@ -9,7 +9,7 @@ from core import Message, ToolCall, ToolSpec
 from memory.memory import Memory
 from skills.skill import Skill
 from spirit.spirit import Schedule, Spirit
-from voice.voice import Voice
+from dialog.dialog import Dialog
 
 
 _MAX_TOOL_ITERATIONS = 8
@@ -25,14 +25,14 @@ class Body:
         memory: Memory,
         skills: list[Skill],
         spirit: Spirit,
-        voice: Voice,
+        dialog: Dialog,
         history_window: int = 40,
     ):
         self._brain = brain
         self._memory = memory
         self._skills = skills
         self._spirit = spirit
-        self._voice = voice
+        self._dialog = dialog
         self._history_window = history_window
         self._last_reconciled_mtime: float = -1.0
 
@@ -50,7 +50,7 @@ class Body:
             "role": "assistant", "content": reply, "schedule": schedule.id,
         })
         if reply:
-            await self._voice.send(reply)
+            await self._dialog.send(reply)
 
     def reconcile_schedules(self, scheduler: Any, reserved_prefix: str = "_") -> bool:
         """Sync APScheduler jobs to current `spirit.schedules`.

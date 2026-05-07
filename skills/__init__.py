@@ -7,5 +7,5 @@ __all__ = ["Skill", "MemorySkill", "OpenMeteo", "default_skills"]
 
 
 def default_skills(memory: Memory) -> list[Skill]:
-    """Single source of truth for the skill set used by the running bot and the view."""
+    """Single source of truth for the skill set used by the running bot and the workshop."""
     return [MemorySkill(memory), OpenMeteo()]

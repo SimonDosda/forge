@@ -4,7 +4,7 @@ from typing import Awaitable, Callable, Protocol
 IncomingHandler = Callable[[str], Awaitable[str]]
 
 
-class Voice(Protocol):
+class Dialog(Protocol):
     """Bidirectional channel: receives user messages, can push outgoing messages."""
 
     async def send(self, text: str) -> None: ...

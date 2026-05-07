@@ -1,10 +1,10 @@
 import sys
 from typing import Any
 
-from voice.voice import IncomingHandler
+from dialog.dialog import IncomingHandler
 
 
-class TelegramVoice:
+class TelegramDialog:
     def __init__(self, token: str, chat_id: int, app: Any | None = None):
         self._token = token
         self._chat_id = int(chat_id)

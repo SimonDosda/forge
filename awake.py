@@ -12,7 +12,7 @@ from brain.brain import BrainConfig, build_brain
 from memory.tinydb_store import TinyDbMemory
 from skills import default_skills
 from spirit.spirit import Spirit
-from voice.telegram import TelegramVoice
+from dialog.telegram import TelegramDialog
 
 
 _PID_FILE = Path("data/bot.pid")
@@ -42,13 +42,13 @@ async def run() -> None:
     ))
     memory = TinyDbMemory(settings.memory_path)
     spirit = Spirit(settings.spirit_path)
-    voice = TelegramVoice(settings.telegram_token, settings.telegram_chat_id)
+    dialog = TelegramDialog(settings.telegram_token, settings.telegram_chat_id)
 
-    body = Body(brain=brain, memory=memory, skills=default_skills(memory), spirit=spirit, voice=voice)
+    body = Body(brain=brain, memory=memory, skills=default_skills(memory), spirit=spirit, dialog=dialog)
 
     scheduler = AsyncIOScheduler()
     body.reconcile_schedules(scheduler)
-    # Pick up Spirit edits made via the View without a restart.
+    # Pick up Spirit edits made via the Workshop without a restart.
     scheduler.add_job(
         body.reconcile_schedules,
         "interval",
@@ -63,12 +63,12 @@ async def run() -> None:
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop_event.set)
 
-    await voice.run(body.handle_user_message)
+    await dialog.run(body.handle_user_message)
     try:
         await stop_event.wait()
     finally:
         scheduler.shutdown(wait=False)
-        await voice.stop()
+        await dialog.stop()
         _remove_pid_file()
 
 

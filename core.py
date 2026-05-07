@@ -1,4 +1,4 @@
-"""Shared dataclasses used across Brain, Memory, Skills, Spirit, Voice, and Body."""
+"""Shared dataclasses used across Brain, Memory, Skills, Spirit, Dialog, and Body."""
 from dataclasses import dataclass, field
 from typing import Any, Literal
 

@@ -1,6 +1,6 @@
 """Browser-based config viewer/editor.
 
-Run with: uv run python -m view.server
+Run with: uv run python -m workshop.server
 """
 import os
 from dataclasses import asdict
@@ -16,7 +16,7 @@ from pydantic import BaseModel
 from memory.tinydb_store import TinyDbMemory
 from skills import default_skills
 from spirit.spirit import InvalidCronError, Schedule, Spirit, SpiritConfig
-from view import env_io
+from workshop import env_io
 
 
 _HERE = Path(__file__).resolve().parent
@@ -59,7 +59,7 @@ class EntryUpdate(BaseModel):
     data: dict[str, Any]
 
 
-class VoiceSend(BaseModel):
+class DialogSend(BaseModel):
     text: str
 
 
@@ -163,10 +163,10 @@ def build_app(env_path: str = ".env") -> FastAPI:
             raise HTTPException(500, f"cannot signal PID {pid}: {exc}")
         return {"status": "signaled", "pid": pid}
 
-    # ---- Voice (Telegram) ----
+    # ---- Dialog (Telegram) ----
 
-    @app.post("/api/voice/send")
-    async def voice_send(body: VoiceSend) -> dict[str, str]:
+    @app.post("/api/dialog/send")
+    async def dialog_send(body: DialogSend) -> dict[str, str]:
         from telegram import Bot
 
         v = _values()
@@ -235,10 +235,10 @@ def build_app(env_path: str = ".env") -> FastAPI:
 def main() -> None:
     import uvicorn
 
-    host = os.getenv("VIEW_HOST", "127.0.0.1")
-    port = int(os.getenv("VIEW_PORT", "8765"))
+    host = os.getenv("WORKSHOP_HOST", "127.0.0.1")
+    port = int(os.getenv("WORKSHOP_PORT", "8765"))
     uvicorn.run(
-        "view.server:build_app",
+        "workshop.server:build_app",
         factory=True,
         host=host,
         port=port,

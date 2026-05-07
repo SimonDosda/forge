@@ -2,12 +2,12 @@
 import sys
 
 import awake
-from view import server as view_server
+from workshop import server as workshop_server
 
 
 _COMMANDS = {
     "awake": awake.main,
-    "view": view_server.main,
+    "workshop": workshop_server.main,
 }
 
 

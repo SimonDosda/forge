@@ -152,7 +152,7 @@
   <button data-tab="memory">Memory</button>
   <button data-tab="brain">Brain</button>
   <button data-tab="skills">Skills</button>
-  <button data-tab="voice">Voice</button>
+  <button data-tab="dialog">Dialog</button>
 </nav>
 
 <section id="tab-brain">
@@ -205,7 +205,7 @@
   <div id="skills-list"></div>
 </section>
 
-<section id="tab-voice">
+<section id="tab-dialog">
   <h3>Telegram</h3>
   <div class="row"><label>Bot token</label>
     <div class="field"><input type="password" id="tg-token" placeholder="(from @BotFather)" /></div>
@@ -217,20 +217,20 @@
     </div>
   </div>
   <div class="toolbar">
-    <button class="primary" onclick="saveVoice()">Save</button>
+    <button class="primary" onclick="saveDialog()">Save</button>
     <span class="meta">Restart the bot to pick up changes.</span>
   </div>
 
   <h3 class="section-divider">Send a message</h3>
-  <textarea id="voice-send-text" rows="3" placeholder="Type a message to send to the chat"></textarea>
+  <textarea id="dialog-send-text" rows="3" placeholder="Type a message to send to the chat"></textarea>
   <div class="toolbar">
-    <button class="primary" onclick="voiceSend()">Send</button>
+    <button class="primary" onclick="dialogSend()">Send</button>
   </div>
 
   <h3 class="section-divider">Recent messages</h3>
-  <div id="voice-messages"></div>
+  <div id="dialog-messages"></div>
   <div class="toolbar">
-    <button class="ghost" onclick="loadVoiceMessages()">Refresh</button>
+    <button class="ghost" onclick="loadDialogMessages()">Refresh</button>
   </div>
 </section>
 
@@ -264,7 +264,7 @@ document.querySelectorAll("nav button").forEach(b => {
     if (t === "brain") loadBrain();
     if (t === "spirit") loadSpirit();
     if (t === "skills") loadSkills();
-    if (t === "voice") loadVoice();
+    if (t === "dialog") loadDialog();
     if (t === "memory") { loadMemoryConfig(); loadTopics(); }
   };
 });
@@ -617,15 +617,15 @@ async function loadSkills() {
   });
 }
 
-// --- Voice ---
-async function loadVoice() {
+// --- Dialog ---
+async function loadDialog() {
   const data = await api("GET", "/api/env");
   $("tg-token").value = data.values.TELEGRAM_TOKEN || "";
   $("tg-chat-id").value = data.values.TELEGRAM_CHAT_ID || "";
-  await loadVoiceMessages();
+  await loadDialogMessages();
 }
 
-async function saveVoice() {
+async function saveDialog() {
   await api("PUT", "/api/env", {
     values: {
       TELEGRAM_TOKEN: $("tg-token").value,
@@ -635,17 +635,17 @@ async function saveVoice() {
   toast("Saved");
 }
 
-async function voiceSend() {
-  const text = $("voice-send-text").value.trim();
+async function dialogSend() {
+  const text = $("dialog-send-text").value.trim();
   if (!text) return;
-  await api("POST", "/api/voice/send", { text });
-  $("voice-send-text").value = "";
+  await api("POST", "/api/dialog/send", { text });
+  $("dialog-send-text").value = "";
   toast("Sent");
-  await loadVoiceMessages();
+  await loadDialogMessages();
 }
 
-async function loadVoiceMessages() {
-  const wrap = $("voice-messages");
+async function loadDialogMessages() {
+  const wrap = $("dialog-messages");
   let entries;
   try {
     entries = await api("GET", "/api/memory/conversation");
@@ -752,7 +752,7 @@ async function loadEntries() {
   });
 }
 
-// --- Renderers shared between Memory and Voice ---
+// --- Renderers shared between Memory and Dialog ---
 function renderKV(value) {
   if (value === null || value === undefined) return `<span class="v-null">${value === null ? "null" : "—"}</span>`;
   if (typeof value === "boolean") return `<span class="v-bool">${value}</span>`;
