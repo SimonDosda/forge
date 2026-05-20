@@ -117,7 +117,7 @@ class Golem:
         ))
         self._memory = TinyDbMemory(f"data/{spec.id}/memory.json")
         self._spirit = Spirit(self._store, spec.id)
-        self._skills = build_skills(self._memory, list(spec.skills))
+        self._skills = build_skills(self._memory, list(spec.skills), spec.skill_configs)
         self._dialog = self._build_dialog()
 
     def _build_dialog(self) -> Dialog:

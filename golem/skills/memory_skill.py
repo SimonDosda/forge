@@ -8,6 +8,7 @@ class MemorySkill:
     """Exposes Memory CRUD as MCP-shaped tools so the Brain can read/write."""
 
     name = "memory"
+    config_schema: list[dict[str, Any]] = []
 
     def __init__(self, memory: Memory):
         self._memory = memory

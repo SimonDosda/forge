@@ -21,6 +21,7 @@ _WMO_CONDITIONS: dict[int, str] = {
 
 class OpenMeteo:
     name = "open_meteo"
+    config_schema: list[dict[str, Any]] = []
 
     def __init__(self, http: requests.Session | None = None, timeout_s: float = 10.0):
         self._http = http or requests.Session()

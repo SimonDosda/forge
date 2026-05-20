@@ -149,9 +149,14 @@
   .toast.error { background: var(--danger); }
   .empty-state { text-align: center; padding: 40px 16px; color: var(--muted); border: 1px dashed var(--border); border-radius: 6px; background: white; }
   .empty-state h2 { font-size: 16px; color: var(--fg); margin: 0 0 8px; }
-  .skills-allowlist { display: flex; flex-direction: column; gap: 6px; }
-  .skills-allowlist label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
-  .skills-allowlist input[type=checkbox] { width: auto; }
+  .skills-allowlist { display: flex; flex-direction: column; gap: 14px; }
+  .skill-row { display: flex; flex-direction: column; gap: 6px; }
+  .skill-row > label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+  .skill-row input[type=checkbox] { width: auto; }
+  .skill-config { margin-left: 24px; padding: 8px 12px; background: white; border: 1px solid var(--border); border-radius: 4px; display: flex; flex-direction: column; gap: 6px; }
+  .skill-config .config-label { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .skill-config input { font-size: 13px; padding: 6px 8px; }
+  .skill-config .hint { font-size: 12px; color: var(--muted); }
   .state-badge { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #eee; color: var(--muted); }
   .state-badge.running { background: #dff5e6; color: var(--accent); }
   .state-badge.running::before { content: "● "; }
@@ -586,6 +591,7 @@ function emptyGolem(name) {
     routines: [],
     topics: [],
     skills: [],
+    skill_configs: {},
   };
 }
 
@@ -604,6 +610,7 @@ async function saveCurrent() {
     routines,
     topics: topicConfigs,
     skills: current.skills,
+    skill_configs: current.skill_configs || {},
   };
   await api("PUT", url, payload);
   const route = currentRoute();
@@ -903,13 +910,37 @@ async function saveSpirit() {
 
 function renderSkillsTab() {
   const enabled = new Set(current.skills || []);
+  const configs = current.skill_configs || {};
+  const schemaByName = Object.fromEntries(
+    registry.describe.map(s => [s.name, s.config_schema || []])
+  );
   const wrap = $("skills-allowlist");
-  wrap.innerHTML = registry.available.map(name => `
-    <label>
-      <input type="checkbox" data-skill="${escapeHtml(name)}" ${enabled.has(name) ? "checked" : ""} />
-      ${escapeHtml(name)}
-    </label>
-  `).join("");
+  wrap.innerHTML = registry.available.map(name => {
+    const isEnabled = enabled.has(name);
+    const schema = schemaByName[name] || [];
+    const cfg = configs[name] || {};
+    const configBlock = (isEnabled && schema.length > 0) ? `
+      <div class="skill-config">
+        ${schema.map(f => `
+          <div class="config-label">${escapeHtml(f.label || f.key)}</div>
+          <input type="${f.secret ? "password" : "text"}"
+                 data-skill="${escapeHtml(name)}" data-config-key="${escapeHtml(f.key)}"
+                 value="${escapeHtml(cfg[f.key] || "")}"
+                 placeholder="${escapeHtml(f.placeholder || "")}" />
+          ${f.description ? `<div class="hint">${escapeHtml(f.description)}</div>` : ""}
+        `).join("")}
+      </div>
+    ` : "";
+    return `
+      <div class="skill-row">
+        <label>
+          <input type="checkbox" data-skill="${escapeHtml(name)}" ${isEnabled ? "checked" : ""} onchange="onSkillToggle()" />
+          ${escapeHtml(name)}
+        </label>
+        ${configBlock}
+      </div>
+    `;
+  }).join("");
 
   const list = $("skills-list");
   list.innerHTML = "";
@@ -933,11 +964,42 @@ function renderSkillsTab() {
   });
 }
 
-async function saveSkills() {
+function readSkillsTab() {
+  // Snapshot the current state of the allowlist (checked boxes + config
+  // inputs) into a {skills, skill_configs} pair so we can re-render without
+  // losing in-flight edits.
   const checked = Array.from(document.querySelectorAll('#skills-allowlist input[type=checkbox]'))
     .filter(c => c.checked)
     .map(c => c.dataset.skill);
-  current.skills = checked;
+  const skill_configs = {};
+  document.querySelectorAll('#skills-allowlist input[data-config-key]').forEach(inp => {
+    const skill = inp.dataset.skill;
+    const key = inp.dataset.configKey;
+    const value = inp.value;
+    if (!checked.includes(skill) || !value) return;
+    if (!skill_configs[skill]) skill_configs[skill] = {};
+    skill_configs[skill][key] = value;
+  });
+  return { skills: checked, skill_configs };
+}
+
+function onSkillToggle() {
+  // Preserve any in-progress config edits, then re-render so the config
+  // block appears/disappears for the toggled skill.
+  const snap = readSkillsTab();
+  current.skills = snap.skills;
+  current.skill_configs = { ...(current.skill_configs || {}), ...snap.skill_configs };
+  // Drop configs for skills that are no longer enabled, so they don't linger.
+  for (const k of Object.keys(current.skill_configs)) {
+    if (!current.skills.includes(k)) delete current.skill_configs[k];
+  }
+  renderSkillsTab();
+}
+
+async function saveSkills() {
+  const snap = readSkillsTab();
+  current.skills = snap.skills;
+  current.skill_configs = snap.skill_configs;
   await saveCurrent();
   toast("Saved");
 }

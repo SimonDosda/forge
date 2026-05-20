@@ -1,8 +1,10 @@
 """Notion skill — search, read, and write pages and database rows.
 
-Auth: reads NOTION_TOKEN from the environment at call time. Create an
-integration at https://www.notion.so/my-integrations and share each target
-page/database with that integration so it can see them.
+Auth: each golem configures its own integration token via the forge UI
+(Skills tab). Create an integration at https://www.notion.so/my-integrations
+and share each target page/database with that integration so it can see them.
+NOTION_TOKEN in the environment is used as a fallback if no per-golem key is
+configured.
 """
 import os
 from typing import Any
@@ -18,8 +20,25 @@ _NOTION_VERSION = "2022-06-28"
 
 class NotionSkill:
     name = "notion"
+    config_schema = [
+        {
+            "key": "api_key",
+            "label": "Notion API key",
+            "secret": True,
+            "description": (
+                "Internal integration token from notion.so/my-integrations. "
+                "Share each page or database you want the golem to access with this integration."
+            ),
+        },
+    ]
 
-    def __init__(self, http: requests.Session | None = None, timeout_s: float = 15.0):
+    def __init__(
+        self,
+        api_key: str = "",
+        http: requests.Session | None = None,
+        timeout_s: float = 15.0,
+    ):
+        self._api_key = api_key
         self._http = http or requests.Session()
         self._timeout = timeout_s
 
@@ -205,12 +224,12 @@ class NotionSkill:
     # ---- HTTP ----
 
     def _headers(self) -> dict[str, str]:
-        token = os.getenv("NOTION_TOKEN") or os.getenv("NOTION_API_KEY")
+        token = self._api_key or os.getenv("NOTION_TOKEN") or os.getenv("NOTION_API_KEY")
         if not token:
             raise RuntimeError(
-                "NOTION_TOKEN not set. Create an integration at "
-                "https://www.notion.so/my-integrations, share the target pages "
-                "with it, and export NOTION_TOKEN."
+                "Notion API key not set. Open the golem's Skills tab in the "
+                "forge, enable Notion, and paste an integration token from "
+                "https://www.notion.so/my-integrations."
             )
         return {
             "Authorization": f"Bearer {token}",

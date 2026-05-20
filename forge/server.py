@@ -77,6 +77,7 @@ class GolemModel(BaseModel):
     routines: list[RoutineModel] = Field(default_factory=list)
     topics: list[TopicModel] = Field(default_factory=list)
     skills: list[str] = Field(default_factory=list)
+    skill_configs: dict[str, dict[str, str]] = Field(default_factory=dict)
 
 
 class EntryUpdate(BaseModel):
@@ -327,6 +328,7 @@ def _from_payload(p: GolemModel) -> GolemSpec:
             TopicSpec(id=t.id, description=t.description) for t in p.topics if t.id
         ),
         skills=tuple(p.skills),
+        skill_configs={k: dict(v) for k, v in p.skill_configs.items()},
     )
 
 
@@ -359,6 +361,7 @@ def _to_full(spec: GolemSpec, supervisor: Supervisor) -> dict[str, Any]:
         "routines": [asdict(r) for r in spec.routines],
         "topics": [asdict(t) for t in spec.topics],
         "skills": list(spec.skills),
+        "skill_configs": {k: dict(v) for k, v in spec.skill_configs.items()},
         "version": spec.version,
     }
 

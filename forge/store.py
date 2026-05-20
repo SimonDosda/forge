@@ -68,6 +68,8 @@ class GolemSpec:
     routines: tuple[Routine, ...] = ()
     topics: tuple[TopicSpec, ...] = ()
     skills: tuple[str, ...] = ()
+    # Per-skill configuration (e.g. {"notion": {"api_key": "..."}}).
+    skill_configs: dict[str, dict[str, str]] = field(default_factory=dict)
     version: int = 0
 
 
@@ -234,6 +236,7 @@ def _to_doc(spec: GolemSpec) -> dict[str, Any]:
         "routines": [asdict(r) for r in spec.routines],
         "topics": [asdict(t) for t in spec.topics],
         "skills": list(spec.skills),
+        "skill_configs": {k: dict(v) for k, v in spec.skill_configs.items()},
         "version": spec.version,
     }
 
@@ -280,5 +283,9 @@ def _to_spec(doc: dict[str, Any]) -> GolemSpec:
             if t.get("id")
         ),
         skills=tuple(str(s) for s in doc.get("skills", [])),
+        skill_configs={
+            str(k): {str(kk): str(vv) for kk, vv in (v or {}).items()}
+            for k, v in (doc.get("skill_configs") or {}).items()
+        },
         version=int(doc.get("version", 0)),
     )
