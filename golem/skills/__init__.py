@@ -8,6 +8,7 @@ from typing import Callable
 
 from golem.memory.memory import Memory
 from golem.skills.memory_skill import MemorySkill
+from golem.skills.notion import NotionSkill
 from golem.skills.open_meteo import OpenMeteo
 from golem.skills.skill import Skill
 
@@ -16,6 +17,7 @@ SkillBuilder = Callable[[Memory], Skill]
 
 REGISTRY: dict[str, SkillBuilder] = {
     "memory": lambda mem: MemorySkill(mem),
+    "notion": lambda _mem: NotionSkill(),
     "open_meteo": lambda _mem: OpenMeteo(),
 }
 
@@ -52,6 +54,7 @@ def describe_skills(memory: Memory) -> list[dict]:
 __all__ = [
     "Skill",
     "MemorySkill",
+    "NotionSkill",
     "OpenMeteo",
     "REGISTRY",
     "available_skill_names",
