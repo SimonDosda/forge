@@ -10,10 +10,14 @@ Children are tied to the forge's lifetime: `shutdown()` terminates them all.
 from __future__ import annotations
 
 import asyncio
+import logging
 import subprocess
 import sys
 
 from forge.store import ForgeStore
+
+
+_log = logging.getLogger(__name__)
 
 
 # How long to wait between SIGTERM and SIGKILL when sleeping a golem.
@@ -33,15 +37,15 @@ class Supervisor:
         for spec in self._store.list_enabled():
             try:
                 await self.awake(spec.id)
-            except Exception as exc:  # noqa: BLE001 — keep other golems running
-                print(f"[forge] failed to awake {spec.id!r}: {exc}", file=sys.stderr)
+            except Exception:  # noqa: BLE001 — keep other golems running
+                _log.exception("failed to awake %r", spec.id)
 
     async def shutdown(self) -> None:
         for id_ in list(self._procs.keys()):
             try:
                 await self.sleep(id_)
-            except Exception as exc:  # noqa: BLE001
-                print(f"[forge] error sleeping {id_!r}: {exc}", file=sys.stderr)
+            except Exception:  # noqa: BLE001
+                _log.exception("error sleeping %r", id_)
 
     # ---- Per-golem lifecycle ----
 

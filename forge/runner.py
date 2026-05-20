@@ -6,6 +6,7 @@ SIGTERM/SIGINT. Each running golem is its own process — crashes and reshapes
 are isolated.
 """
 import asyncio
+import logging
 import signal
 import sys
 from pathlib import Path
@@ -14,14 +15,16 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from forge.store import ForgeStore, GolemNotFoundError
 from golem.golem import Golem
+from golem.log import configure_logging
 
 
 async def _run(id_: str) -> int:
+    log = logging.getLogger(f"golem.{id_}")
     store = ForgeStore()
     try:
         spec = store.get_golem(id_)
     except GolemNotFoundError:
-        print(f"[{id_}] not found in forge store", file=sys.stderr)
+        log.error("not found in forge store")
         return 2
 
     scheduler = AsyncIOScheduler()
@@ -30,8 +33,8 @@ async def _run(id_: str) -> int:
 
     try:
         await golem.awake()
-    except Exception as exc:  # noqa: BLE001
-        print(f"[{id_}] awake failed: {exc}", file=sys.stderr)
+    except Exception:
+        log.exception("awake failed")
         scheduler.shutdown(wait=False)
         return 1
 
@@ -48,19 +51,20 @@ async def _run(id_: str) -> int:
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, stop_event.set)
 
-    print(f"[{id_}] awake", file=sys.stderr)
+    log.info("awake")
     try:
         await stop_event.wait()
     finally:
         await golem.sleep()
         scheduler.shutdown(wait=False)
-    print(f"[{id_}] sleeping", file=sys.stderr)
+    log.info("sleeping")
     return 0
 
 
 def main() -> None:
+    configure_logging()
     if len(sys.argv) != 2:
-        print("usage: python -m forge.runner <id>", file=sys.stderr)
+        logging.getLogger("forge.runner").error("usage: python -m forge.runner <id>")
         sys.exit(2)
     # Ensure relative paths (data/forge.json, data/<id>/memory.json) resolve
     # against the project root regardless of where the supervisor invoked us.

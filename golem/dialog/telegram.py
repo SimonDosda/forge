@@ -1,7 +1,10 @@
-import sys
+import logging
 from typing import Any
 
 from golem.dialog.dialog import IncomingHandler
+
+
+_log = logging.getLogger(__name__)
 
 
 class TelegramDialog:
@@ -26,10 +29,9 @@ class TelegramDialog:
             if sender_chat_id != self._chat_id:
                 user = update.effective_user
                 user_label = f"{user.id} ({user.username or user.full_name})" if user else "unknown"
-                print(
-                    f"[telegram] ignored message from unauthorized chat_id={sender_chat_id} user={user_label}",
-                    file=sys.stderr,
-                    flush=True,
+                _log.warning(
+                    "ignored message from unauthorized chat_id=%s user=%s",
+                    sender_chat_id, user_label,
                 )
                 return
             reply = await on_message(update.message.text)

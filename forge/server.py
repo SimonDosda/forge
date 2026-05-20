@@ -90,6 +90,8 @@ class DialogSend(BaseModel):
 # ---------- App ----------
 
 def build_app(env_path: str = ".env") -> FastAPI:
+    from golem.log import configure_logging
+    configure_logging()
     load_dotenv(env_path, override=False)
 
     store = ForgeStore()

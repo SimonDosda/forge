@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-import sys
+import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -31,6 +31,8 @@ if TYPE_CHECKING:
 
 _MAX_TOOL_ITERATIONS = 8
 _CONVO_TOPIC = "conversation"
+_ERROR_TOPIC = "errors"
+_log = logging.getLogger(__name__)
 
 
 class Golem:
@@ -83,8 +85,8 @@ class Golem:
         if self._dialog is not None:
             try:
                 await self._dialog.stop()
-            except Exception as exc:  # noqa: BLE001
-                print(f"[golem:{self.name}] error stopping dialog: {exc}", file=sys.stderr)
+            except Exception:  # noqa: BLE001
+                _log.exception("[%s] error stopping dialog", self.id)
         self._remove_routine_jobs()
         self._brain = None
         self._memory = None
@@ -171,19 +173,138 @@ class Golem:
 
     async def handle_user_message(self, text: str) -> str:
         assert self._memory is not None
+        stripped = (text or "").strip()
+        if stripped.lower() == "/status":
+            _log.info("[%s] /status command", self.id)
+            return self._status_report()
         self._memory.add(_CONVO_TOPIC, {"role": "user", "content": text})
-        reply = await self._think(user_text=text)
+        _log.info("[%s] user message: %s", self.id, _truncate(text))
+        try:
+            reply = await self._think(user_text=text)
+        except Exception as exc:
+            return await self._handle_error(exc, source="user_message", input_text=text)
         self._memory.add(_CONVO_TOPIC, {"role": "assistant", "content": reply})
+        _log.info("[%s] reply: %s", self.id, _truncate(reply))
         return reply
 
     async def fire_routine(self, routine: Routine) -> None:
         assert self._memory is not None and self._dialog is not None
-        reply = await self._think(user_text=routine.prompt, routine_id=routine.id)
+        _log.info("[%s] firing routine %r", self.id, routine.id)
+        try:
+            reply = await self._think(user_text=routine.prompt, routine_id=routine.id)
+        except Exception as exc:
+            await self._handle_error(exc, source=f"routine:{routine.id}", input_text=routine.prompt)
+            return
         self._memory.add(_CONVO_TOPIC, {
             "role": "assistant", "content": reply, "routine": routine.id,
         })
         if reply:
             await self._dialog.send(reply)
+
+    def _status_report(self) -> str:
+        """Build a human-readable health report covering each body component."""
+        lines: list[str] = [f"🤖 {self._spec.name} — status", ""]
+
+        # Brain
+        b = self._spec.brain
+        brain_label = f"{b.provider}/{b.model or '(no model)'}"
+        if not b.model:
+            lines.append(f"⚠️ Brain: {brain_label} — model missing")
+        elif b.provider in ("mistral", "anthropic", "openai") and not b.api_key:
+            lines.append(f"⚠️ Brain: {brain_label} — no API key")
+        else:
+            lines.append(f"✅ Brain: {brain_label}")
+
+        # Memory
+        if self._memory is None:
+            lines.append("❌ Memory: not initialized")
+        else:
+            topics = self._memory.topics()
+            counts = [(t, len(self._memory.get(t))) for t in topics]
+            total = sum(n for _, n in counts)
+            lines.append(f"✅ Memory: {len(topics)} topics, {total} entries (data/{self._spec.id}/memory.json)")
+            for t, n in counts:
+                lines.append(f"   • {t}: {n}")
+
+        # Dialog
+        dlg = self._spec.dialog
+        if dlg.kind == "telegram":
+            tg = dlg.telegram
+            if not tg.token or not tg.chat_id:
+                lines.append("⚠️ Dialog: telegram — token or chat_id missing")
+            else:
+                lines.append(f"✅ Dialog: telegram (chat {tg.chat_id})")
+        else:
+            lines.append(f"✅ Dialog: {dlg.kind}")
+
+        # Skills
+        if not self._skills:
+            lines.append("⚠️ Skills: none enabled")
+        else:
+            tools_total = sum(len(s.tools) for s in self._skills)
+            lines.append(f"✅ Skills: {len(self._skills)} ({tools_total} tools) — {', '.join(self._spec.skills)}")
+
+        # Mission
+        mission_len = len(self._spec.mission or "")
+        if mission_len == 0:
+            lines.append("⚠️ Mission: empty")
+        else:
+            lines.append(f"✅ Mission: {mission_len} chars")
+
+        # Topic descriptions
+        described = [t.id for t in self._spec.topics if t.description.strip()]
+        if described:
+            lines.append(f"✅ Topic prompts: {len(described)} described — {', '.join(described)}")
+
+        # Routines + scheduler jobs
+        ns = f"{self.id}:"
+        jobs = [j for j in self._scheduler.get_jobs() if j.id.startswith(ns) and not j.id.endswith("_reconcile_routines")]
+        routine_names = {r.id: (r.name or r.id) for r in self._spec.routines}
+        if not self._spec.routines:
+            lines.append("○ Routines: none configured")
+        else:
+            lines.append(f"✅ Routines: {len(self._spec.routines)} configured, {len(jobs)} scheduled")
+            for j in jobs:
+                nxt = j.next_run_time.strftime("%Y-%m-%d %H:%M %Z") if j.next_run_time else "—"
+                rid = j.id[len(ns):]
+                label = routine_names.get(rid, rid)
+                lines.append(f"   • {label} — next: {nxt}")
+
+        # Recent errors
+        if self._memory is not None:
+            recent_errors = self._memory.get(_ERROR_TOPIC)[-3:]
+            if recent_errors:
+                lines.append("")
+                lines.append(f"⚠️ Last {len(recent_errors)} error(s):")
+                for e in recent_errors:
+                    when = (e.created_at or "").split("T")[0]
+                    src = e.data.get("source", "?")
+                    msg = _truncate(e.data.get("error", ""), 80)
+                    lines.append(f"   • {when} [{src}] {msg}")
+
+        return "\n".join(lines)
+
+    async def _handle_error(self, exc: BaseException, *, source: str, input_text: str) -> str:
+        """Persist error context, log full traceback, notify the dialog channel."""
+        _log.exception("[%s] error in %s", self.id, source)
+        message = f"{type(exc).__name__}: {exc}"
+        if self._memory is not None:
+            self._memory.add(_ERROR_TOPIC, {
+                "source": source,
+                "input": input_text,
+                "error": message,
+            })
+            self._memory.add(_CONVO_TOPIC, {
+                "role": "system",
+                "content": f"[error in {source}] {message}",
+            })
+        notice = f"⚠️ I hit an error while handling that ({source}): {message}"
+        if self._dialog is not None:
+            try:
+                await self._dialog.send(notice)
+            except Exception:
+                _log.exception("[%s] failed to send error notification", self.id)
+        return notice
 
     # ---- Core loop ----
 
@@ -266,6 +387,11 @@ def _to_json(value: Any) -> str:
         return json.dumps(value, default=str, ensure_ascii=False)
     except TypeError:
         return json.dumps(str(value))
+
+
+def _truncate(text: str, max_len: int = 120) -> str:
+    text = (text or "").replace("\n", " ")
+    return text if len(text) <= max_len else text[: max_len - 1] + "…"
 
 
 def _format_topics(topics) -> str:
