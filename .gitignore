@@ -36,6 +36,6 @@ htmlcov/
 # Logs
 *.log
 
-# Runtime data (memory entries are local-only; spirit.json ships with the repo)
-data/*
-!data/spirit.json
+# Runtime data — golem registry, per-golem memory, all credentials live here.
+# Must be persisted and backed up on the VPS, but never committed.
+data/
