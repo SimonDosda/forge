@@ -7,9 +7,9 @@ services:
     volumes:
       - ./data:/app/data
     # The forge UI is HTTP on 8765. Outbound bot traffic doesn't need this open.
-    # Uncomment to reach the UI via SSH tunnel (ssh -L 8765:127.0.0.1:8765 vps):
-    # ports:
-    #   - "127.0.0.1:8765:8765"
+    # Expose only localhost on the host so the SSH tunnel can forward it securely.
+    ports:
+      - "127.0.0.1:8765:8765"
     logging:
       driver: json-file
       options:
