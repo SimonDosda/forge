@@ -41,12 +41,17 @@ class TinyDbMemory:
     def __init__(self, path: str | Path):
         self._path = Path(path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = TinyDB(
-            str(self._path),
-            storage=_AtomicJSONStorage,
-            indent=2,
-            ensure_ascii=False,
-        )
+        try:
+            self._db = TinyDB(
+                str(self._path),
+                storage=_AtomicJSONStorage,
+                indent=2,
+                ensure_ascii=False,
+            )
+        except PermissionError as exc:
+            raise PermissionError(
+                f"cannot open memory store at {self._path!s}: ensure the runtime user can write to {self._path.parent!s}"
+            ) from exc
 
     def get(self, topic: str, entry_id: str | None = None) -> list[Entry]:
         table = self._table(topic)

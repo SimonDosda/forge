@@ -37,8 +37,10 @@ RUN groupadd --system --gid 1000 app \
  && chown -R app:app /app
 
 WORKDIR /app
-USER app
 
 COPY --from=builder --chown=app:app /app /app
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["golem", "forge"]

@@ -104,7 +104,12 @@ class ForgeStore:
     def __init__(self, path: str | Path = "data/forge.json"):
         self._path = Path(path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = TinyDB(str(self._path), indent=2, ensure_ascii=False)
+        try:
+            self._db = TinyDB(str(self._path), indent=2, ensure_ascii=False)
+        except PermissionError as exc:
+            raise PermissionError(
+                f"cannot open forge database at {self._path!s}: ensure the runtime user can write to {self._path.parent!s}"
+            ) from exc
         self._lock = threading.Lock()
         self._backfill_ids()
 
